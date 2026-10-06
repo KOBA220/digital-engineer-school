@@ -1,2 +1,121 @@
-# digital-engineer-school
-デジタルエンジニア学校：部署を超えた共同開発・デザイン・スクラム・資料・会議のキャンパス
+# デジタルエンジニア学校
+
+部署を超えて、2人から共同開発を始める学校型Webアプリ。校内案内、黒板、教室札、掲示板、資料棚で構成しています。
+
+## 現在の状態
+
+初版のコード・公開ワークフロー・Supabase用SQLを作成済みです。外部サービスのアカウント設定と公開は未完了です。
+設定前は端末内プレビューです。プレビューではログイン・アクセス制御・他端末への同期を提供しません。Private / Publicの表示も体験用です。実データを入れる前に共同利用の設定を完了してください。
+
+| 部屋 | 初版で使える機能 | 接続・拡張が必要な機能 |
+|---|---|---|
+| 開発部屋 | GitHub連携先登録、GitHub.dev / Codespacesへの移動、clone手順、Git解説、コード下書き | 学校内に完全なIDE・ターミナルを内蔵、GitHubへの直接push |
+| デザイン部屋 | 14種類の部品、ドラッグ、位置・サイズ・色・内容編集、複製、削除、JSON書き出し | Supabase接続後の2人の実同期。高度なFigma機能（画像配置・グループ・制約・プロトタイプ等） |
+| スクラム部屋 | エピック・タスク、ドラッグで状態変更、担当・期限、リファイメント、KPT・投票、改善をタスク化 | Supabase接続後の実同期。スプリント集計・高度なJira機能 |
+| 資料部屋 | 6枚のPPTXテンプレート、3ページのWord仕様書、AIスキル、URL・テキストの登録 | ファイル直接アップロード・版管理・オンラインOffice編集 |
+| 会議室 | 月間カレンダー、議事録、会議URL、共有、Markdown保存 | Teams予定の自動生成・文字起こし |
+| 環境委員会 | VSCode、Git、AIスキル、共同利用の手順 | 会社独自の手順の追加 |
+
+## ローカル起動
+
+依存パッケージのインストールは不要。Python 3とNode.js 20以降を使用します。
+
+```sh
+python3 -m http.server 4173
+# http://localhost:4173 を開く
+npm run check
+npm run build
+```
+
+WindowsのPython Launcherの場合は `py -m http.server 4173` でも起動できます。
+
+フロントエンドはHTML / CSS / ES Modulesを使用し、GitHub PagesにもVercelにも同じ画面を公開できます。実行環境の部屋は外部IDEにつなぐ初版です。
+
+## 2人の共同利用を有効にする
+
+1. 新規Supabaseプロジェクトを作成する。
+2. SQL Editorで `supabase/schema.sql` を実行する。既存業務DBへの実行は想定していません。
+3. DB管理者が次のSQLで2人のメールを参加許可リストに登録する。
+
+```sql
+insert into public.school_allowed_emails(email)
+values ('first@example.com'), ('second@example.com');
+```
+
+4. `config.js` の `supabaseUrl` / `supabasePublishableKey` に、Project URLと公開用publishable key（またはlegacy anon key）を入れる。service_roleキー・秘密キー・GitHubトークンは絶対に入れない。
+5. AuthenticationのSite URLとRedirect URLsに学校の公開URLを登録する。GitHub Pagesのリポジトリ配下パスも含める。
+6. Realtime Settingsの **Allow public access** を無効にする。SQLは認証とプロジェクト権限でprivateチャンネルを制限します。
+7. 2人が学校で初回登録し、メール確認を完了する。許可リストと一致した確認済みユーザーだけが入校できます。
+8. 1人がプロジェクトを作り、メンバー追加で2人目の登録済みメールを追加する。招待メールの自動送信はありません。
+9. 同じプロジェクトを別ブラウザで開き、タスク・付箋・在室アイコン・カーソルが同期することを確認する。
+
+既に登録・メール確認済みのユーザーを後から許可した場合は、schema.sql末尾のschool_users追加SQLも実行してください。
+
+登録後はSupabaseのセッションを同じブラウザで保持し、トークンを自動更新します。ログアウト・データ削除・管理者による失効等では再認証が必要です。プレビューの保存データは共同利用DBへ自動移行しません。
+
+## 公開範囲
+
+- Private：招待メンバーだけが閲覧できます。
+- Public：この学校の入校許可済みユーザーが閲覧できます。インターネット全体への公開ではありません。
+- 編集：所有者・編集者のみ。閲覧者は編集できません。
+- ソースコードのPublic / PrivateはGitHubのリポジトリ設定で別に管理します。
+- プロジェクト・部屋・タスク・議事録はhash URLで共有します。URLを知っていてもDBの権限チェックは省略されません。
+- この初版は **1つの学校（会社・チーム）につき1つのSupabaseプロジェクト** です。複数会社のデータを同じDBで分離するマルチテナント版ではありません。
+
+## GitHub Pagesで公開
+
+1. GitHubにリポジトリ `digital-engineer-school` を作成して、このフォルダをpushする。
+2. Settings → Pages → SourceをGitHub Actionsにする。
+3. Settings → Secrets and variables → Actions → Variablesに以下を追加する（公開用値のみ）。
+   - `SCHOOL_SUPABASE_URL`
+   - `SCHOOL_SUPABASE_KEY`
+4. mainへのpushで `.github/workflows/pages.yml` が画面をビルド・公開する。
+
+無料GitHub Pagesを使う場合は、Publicリポジトリを基本に検討してください。公開するのはアプリのコードとテンプレートで、Privateプロジェクトの業務データはSupabaseに保存します。GitHub Pagesの公開範囲とリポジトリの公開範囲は同一ではありません。
+
+`dist/` には静的な画面だけが入ります。プレビュー・未設定状態で公開した場合は同期しません。
+
+## Vercelで公開
+
+GitHubリポジトリをImportし、Build Commandを `npm run build`、Output Directoryを `dist` に設定します。環境変数は同名の `SCHOOL_SUPABASE_URL` / `SCHOOL_SUPABASE_KEY` を設定します。vercel.jsonにも設定を用意しています。業務利用はHobbyの条件を確認し、必要な有料プランを使ってください。
+
+## 保存・同期
+
+- 認証：Supabase Auth。入校許可メールと確認済みユーザーに制限。
+- プロジェクト・メンバー・プロフィール・各部屋のデータ：Postgres + RLS。
+- データの変更：Postgres Changes。
+- 在室表示：Private channelのPresence。
+- カーソル：Private channelのBroadcast。100ms間隔に制限。
+- 同一カード・図形の更新競合：versionによる楽観ロック。古い編集は拒否し、最新内容の再確認を求めます。
+- 削除：entitiesのソフト削除。管理者が復旧できます。復旧UIは未実装。
+
+## 検証
+
+- JavaScriptの構文チェック、静的公開ビルド。
+- ローカルのChromiumで初回名札、6つの部屋、タスク更新、キャンバス保存・復元、KPT投票、会議カレンダー、資料ダウンロード、コード下書き、Public作成、390px幅での表示を確認。
+- PostgreSQL互換のPGliteでSQL、入校許可、Private/Public、所有者・編集者・閲覧者、権限昇格の拒否、競合拒否、ソフト削除、チャンネル権限を検証。
+- PPTX全6枚、Word全3ページをレンダリングして確認。
+- 未検証：実際のSupabase Authのメール送信、ブラウザ間のRealtime通信、論理レプリケーション、GitHub Actions実行、公開URLからの動作。外部接続後に必ず実施します。
+
+## アバター
+
+30種類のオリジナル画像（アニメ風・手描きアニメ風・3Dアニメ風）。画像生成で作成したassets/avatars.webpをCSSで30分割表示します。既存映画の登場人物を使用していません。
+
+### 再実行する検証
+
+```sh
+npm test
+# SQLの検証だけは開発用パッケージが必要
+npm install --no-save @electric-sql/pglite@0.3.14
+npm run test:db
+```
+
+## 学校らしい画面の更新
+
+校舎の教室案内、校内廊下、教室の扉と名札、木枠の黒板、掲示板の紙、資料棚で構成しています。部署の入力はありません。アバターはアニメ風・手描きアニメ風・3Dアニメ風それぞれ10キャラ（人間5・動物5）、合計30キャラです。動物はねこ・いぬ・きつね・うさぎ・くまです。
+
+旧版のSupabaseスキーマを設定済みの場合は、`supabase/upgrade-avatars.sql` を実行してアバター番号の上限を29に更新してください。新規設定では`schema.sql`だけで対応します。
+
+## プロジェクト管理
+
+所有者はプロジェクト設定で名称・目標・Private/Publicを変更できます。メンバー・権限から参加者一覧を確認できます。バックアップJSONには現在のプロジェクト内のカード・図形・資料・会議・下書きが入ります。復元は新規Privateプロジェクトに行い、招待権限は引き継ぎません。復元途中で失敗した場合は、その時点までの内容が新規プロジェクトに残ります。

@@ -1,0 +1,16 @@
+{
+  "name": "digital-engineer-school",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "python3 -m http.server 4173",
+    "check": "node --check app.js && node --check store.js && node --check canvas.js",
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/store.test.mjs",
+    "test:db": "node tests/database.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
