@@ -1,6 +1,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 const memory=new Map();globalThis.localStorage={getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,String(v)),removeItem:k=>memory.delete(k)};
+const {config}=await import('../config.js');
+config.supabaseUrl='';config.supabasePublishableKey='';
 const store=await import('../store.js');
 test('preview retains entry and keeps project data separate',async()=>{
  store.enterPreview();await store.saveProfile({name:'開発者',department:'DX',avatar:2});
