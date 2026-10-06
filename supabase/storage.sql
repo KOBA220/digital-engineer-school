@@ -1,0 +1,4 @@
+-- Shared room attachments. Private bucket, project UUID is the first path segment.
+insert into storage.buckets(id,name,public,file_size_limit) values('school-files','school-files',false,20971520) on conflict(id) do nothing;
+create policy school_files_read on storage.objects for select to authenticated using(bucket_id='school-files' and public.can_read_project(case when (storage.foldername(name))[1] ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' then (storage.foldername(name))[1]::uuid else null end));
+create policy school_files_insert on storage.objects for insert to authenticated with check(bucket_id='school-files' and public.can_edit_project(case when (storage.foldername(name))[1] ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' then (storage.foldername(name))[1]::uuid else null end));

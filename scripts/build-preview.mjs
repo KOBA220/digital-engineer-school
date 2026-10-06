@@ -4,8 +4,9 @@ let css=await read('style.css');
 const avatar=await readFile(new URL('../assets/avatars.webp',import.meta.url));css=css.replace("url('assets/avatars.webp')",`url('data:image/webp;base64,${avatar.toString('base64')}')`);
 const campus=await readFile(new URL('../assets/school-watercolor.webp',import.meta.url));css=css.replaceAll("url('assets/school-watercolor.webp')",`url('data:image/webp;base64,${campus.toString('base64')}')`);
 for(const file of ['chalkboard.webp','room-plaque.webp']){const data=await readFile(new URL('../assets/'+file,import.meta.url));css=css.replaceAll(`url('assets/${file}')`,`url('data:image/webp;base64,${data.toString('base64')}')`)}
-const modules=await Promise.all(['config.js','store.js','canvas.js','app.js'].map(read));
-modules[2]=modules[2].replace(/\besc\b/g,'canvasEscape');
+const modules=await Promise.all(['config.js','store.js','attachments.js','canvas.js','app.js'].map(read));
+modules[0]="export const config={supabaseUrl:'',supabasePublishableKey:'',schoolName:'デジタルエンジニア学校'};";
+modules[3]=modules[3].replace(/\besc\b/g,'canvasEscape');
 let js=modules.map(s=>s.replace(/^import .*?;\n/gm,'').replace(/\bexport\s+(?=const|function|async function)/g,'')).join('\n');
 for(const [file,mime] of [['school-presentation.pptx','application/vnd.openxmlformats-officedocument.presentationml.presentation'],['system-specification.docx','application/vnd.openxmlformats-officedocument.wordprocessingml.document'],['SKILL.md','text/markdown']]){const data=await readFile(new URL('../templates/'+file,import.meta.url));js=js.replaceAll(`href="templates/${file}"`,`href="data:${mime};base64,${data.toString('base64')}"`)}
 js=js.replaceAll("des-preview-v1","des-standalone-preview-v1").replaceAll("des-preview-entered","des-standalone-preview-entered");
