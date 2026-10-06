@@ -128,7 +128,7 @@ create policy school_realtime_send on realtime.messages for insert to authentica
 revoke all on public.school_allowed_emails,public.school_users,public.profiles,public.projects,public.project_members,public.entities from anon,authenticated;
 grant select on public.school_users,public.profiles,public.projects,public.project_members,public.entities to authenticated;
 grant insert,update on public.profiles to authenticated;
-grant update(repo) on public.projects to authenticated;
+grant update(name,description,visibility,repo) on public.projects to authenticated;
 revoke all on function public.is_school_user(),public.can_read_project(uuid),public.can_edit_project(uuid),public.owns_project(uuid),public.admit_school_user(),public.create_school_project(uuid,text,text,text,text,text),public.invite_project_member(uuid,text,text),public.save_entity(uuid,uuid,text,jsonb,integer,boolean),public.can_join_school_topic(text) from public,anon;
 grant execute on function public.is_school_user(),public.can_read_project(uuid),public.can_edit_project(uuid),public.owns_project(uuid),public.create_school_project(uuid,text,text,text,text,text),public.invite_project_member(uuid,text,text),public.save_entity(uuid,uuid,text,jsonb,integer,boolean),public.can_join_school_topic(text) to authenticated;
 do $$ begin
