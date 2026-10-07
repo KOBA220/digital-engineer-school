@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "python3 -m http.server 4173",
-    "check": "node --check app.js && node --check store.js && node --check canvas.js && node --check ai.js && node --check campus3d.js",
+    "check": "node --check app.js && node --check store.js && node --check canvas.js && node --check ai.js && node --check campus3d.js && node --check community-data.js && node --check community-chat.js && node --check study-bank.js && node --check study-room.js",
     "build": "node scripts/build.mjs",
-    "test": "node --test tests/store.test.mjs tests/config.test.mjs",
+    "test": "node --test tests/store.test.mjs tests/config.test.mjs tests/study.test.mjs",
     "test:db": "node tests/database.test.mjs"
   },
   "engines": {
