@@ -1,4 +1,4 @@
-import {campusSceneHTML,bindCampusScene} from './campus3d.js?v=summer-yard-3';
+import {campusSceneHTML,bindCampusScene} from './campus3d.js?v=summer-yard-4';
 import {bindAI} from './ai.js';
 import {uploadAttachment,downloadAttachment} from './attachments.js';
 import {config} from './config.js';
