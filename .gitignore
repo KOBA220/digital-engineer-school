@@ -1,6 +1,8 @@
 .env*
 node_modules/
 dist/
+/templates/presentation/anime-components.pptx
+/templates/presentation/mini-components.pptx
 test-results/
 
 node_modules/
