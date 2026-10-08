@@ -12,9 +12,12 @@ export function officeURL(value){
 }
 export const teamRules=projectId=>list('resource',projectId).filter(e=>e.payload.category==='team-rule');
 export const officeDocuments=projectId=>list('resource',projectId).filter(e=>e.payload.category==='shared-office');
-export function rulesHTML(projectId){
+export function rulesHTML(projectId,{layout='home'}={}){
  const rules=projectId?teamRules(projectId):[];
- return `<section class="noticeboard team-rules"><span class="section-label">プロジェクトの掲示板</span><div class="section-heading"><h2>約束・ルール</h2><button data-team-rule-new ${projectId&&canEdit()?'':'disabled'}>＋ 追加</button></div><p class="muted">チームで決めた約束を、自由に書き足せます。</p>${rules.map(e=>`<article class="paper"><strong>${esc(e.payload.title)}</strong><p style="white-space:pre-wrap">${esc(e.payload.content)}</p>${canEdit()?`<div class="row"><button data-team-rule-edit="${e.id}">編集</button><button data-team-rule-delete="${e.id}" class="quiet">削除</button></div>`:''}</article>`).join('')||`<p class="empty">${projectId?'まだ約束はありません。「＋ 追加」から登録してください。':'プロジェクトを選ぶと約束を追加できます。'}</p>`}<small>${state.preview?'この端末だけに保存されます。':'保存した約束は、同じプロジェクトのメンバーにも反映されます。'}</small></section>`;
+ const actions=e=>canEdit()?`<div class="row rule-actions"><button class="quiet" data-team-rule-edit="${e.id}">編集</button><button class="quiet" data-team-rule-delete="${e.id}">削除</button></div>`:'';
+ const add=`<button class="text-button" data-team-rule-new ${projectId&&canEdit()?'':'disabled'}>＋ 約束・ルールを追加</button>`;
+ if(layout==='dev')return `<section class="noticeboard team-rules"><span class="section-label">開発ルール掲示板</span><h2>教室の約束</h2><ol class="rules"><li>開始前に最新の変更を取得</li><li>作業ごとにブランチを作る</li><li>一日の最後にcommit &amp; push</li><li>mainへはPRとレビューで反映</li><li>秘密情報はコードに書かない</li><li>完了条件と結果をタスクに残す</li>${rules.map(e=>`<li><strong>${esc(e.payload.title)}</strong>${e.payload.content?`<p class="rule-content">${esc(e.payload.content)}</p>`:''}${actions(e)}</li>`).join('')}</ol>${add}</section>`;
+ return `<section class="noticeboard team-rules"><span class="section-label">校内掲示板</span><h2>チームの約束</h2><div class="paper yellow-paper"><span class="pin"></span><strong>一日の最後はcommit &amp; push</strong><p>作業の続きが、明日の自分と仲間に伝わるように。</p></div><div class="paper"><span class="pin"></span><strong>小さく作って、早く共有</strong><p>困ったことはタスクに残して、教室で相談しよう。</p></div>${rules.map((e,i)=>`<div class="paper ${i%2===0?'yellow-paper':''}"><span class="pin"></span><strong>${esc(e.payload.title)}</strong>${e.payload.content?`<p class="rule-content">${esc(e.payload.content)}</p>`:''}${actions(e)}</div>`).join('')}<div class="row wrap">${add}<button class="text-button" data-action="openRules">開発ルールを読む</button></div></section>`;
 }
 export function officeHTML(projectId){
  const docs=projectId?officeDocuments(projectId):[];
