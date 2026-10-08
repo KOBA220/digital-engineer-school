@@ -21,7 +21,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm run check && npm run build
+      - run: npm ci
+      - run: npm run check && npm test && npm run build
         env:
           SCHOOL_SUPABASE_URL: ${{ vars.SCHOOL_SUPABASE_URL }}
           SCHOOL_SUPABASE_KEY: ${{ vars.SCHOOL_SUPABASE_KEY }}
