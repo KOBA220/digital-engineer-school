@@ -4,7 +4,7 @@ import {rulesHTML,officeHTML,officeDocuments,bindTeamWork} from './team-work.js?
 import {presentationRoomHTML,bindPresentationRoom} from './presentation-room.js?v=presentation-styles-1';
 import {communityChatHTML,bindCommunityChat} from './community-chat.js';
 import {studyRoomHTML,bindStudyRoom} from './study-room.js';
-import {campusSceneHTML,bindCampusScene} from './campus3d.js?v=presentation-styles-1';
+import {campusSceneHTML,bindCampusScene} from './campus3d.js?v=two-sided-hall-1';
 import {bindAI} from './ai.js';
 import {uploadAttachment,downloadAttachment,attachmentURL} from './attachments.js';
 import {config} from './config.js';

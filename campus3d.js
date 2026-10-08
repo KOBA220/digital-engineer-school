@@ -1,5 +1,5 @@
 // Dependency-free perspective campus. Geometry is projected from a walkable camera.
-export function campusSceneHTML(rooms){return `<section class="campus-walk"><div class="campus-walk-toolbar"><div><strong>アニメの校舎を歩く</strong><small>ドラッグで見回す · 移動ボタン / WASD・矢印キー · 部屋札をクリックして入室</small></div><div><button data-campus-view="yard">校庭</button><button data-campus-view="hall">廊下に入る</button><button data-campus-full>⛶ 大きく表示</button></div></div><div class="campus-scene"><canvas id="campus-scene" tabindex="0" aria-label="学校構内の3D案内。WASDで移動、ドラッグで視線を回転。下の教室一覧からも入室できます。"></canvas><div class="campus-location" id="campus-location">校庭 · 正面玄関</div><div class="campus-crosshair" aria-hidden="true">＋</div><div class="campus-motion" aria-label="構内の移動"><button data-campus-move="forward" aria-label="前へ進む">↑</button><div><button data-campus-move="left" aria-label="左へ移動">←</button><button data-campus-move="back" aria-label="後ろへ移動">↓</button><button data-campus-move="right" aria-label="右へ移動">→</button></div></div><p id="campus-scene-hint" role="status">玄関をクリックすると廊下へ入れます</p></div><nav class="school3d-room-links" aria-label="教室一覧">${rooms.map(r=>`<button data-room="${r[0]}">${r[4]} ${r[2]}</button>`).join('')}</nav></section>`;}
+export function campusSceneHTML(rooms){return `<section class="campus-walk"><div class="campus-walk-toolbar"><div><strong>アニメの校舎を歩く</strong><small>ドラッグで見回す · 移動ボタン / WASD・矢印キー · 部屋札をクリックして入室</small></div><div><button data-campus-view="yard">校庭</button><button data-campus-view="hall">廊下に入る</button><button data-campus-turn disabled>振り返る</button><button data-campus-full>⛶ 大きく表示</button></div></div><div class="campus-scene"><canvas id="campus-scene" tabindex="0" aria-label="学校構内の3D案内。WASDで移動、ドラッグで視線を回転。下の教室一覧からも入室できます。"></canvas><div class="campus-location" id="campus-location">校庭 · 正面玄関</div><div class="campus-crosshair" aria-hidden="true">＋</div><div class="campus-motion" aria-label="構内の移動"><button data-campus-move="forward" aria-label="前へ進む">↑</button><div><button data-campus-move="left" aria-label="左へ移動">←</button><button data-campus-move="back" aria-label="後ろへ移動">↓</button><button data-campus-move="right" aria-label="右へ移動">→</button></div></div><p id="campus-scene-hint" role="status">玄関をクリックすると廊下へ入れます</p></div><nav class="school3d-room-links" aria-label="教室一覧">${rooms.map(r=>`<button data-room="${r[0]}">${r[4]} ${r[2]}</button>`).join('')}</nav></section>`;}
 export function bindCampusScene({rooms,onEnter}){
  const canvas=document.querySelector('#campus-scene');if(!canvas)return ()=>{};const ctx=canvas.getContext('2d');if(!ctx)return ()=>{};
  const root=canvas.closest('.campus-walk'),hint=root.querySelector('#campus-scene-hint'),locationLabel=root.querySelector('#campus-location');
@@ -38,19 +38,30 @@ export function bindCampusScene({rooms,onEnter}){
 
  // Narrow timber boards, with deterministic grain and blue ambient shadows.
  for(let x=-16;x<16;x+=.48)for(let z=-9;z<12;z+=2.4){const tone=['#c9a574','#d8b887','#be996d','#dcc198'][Math.abs(Math.round(x*10+z*5))%4];polygon([[x,.012,z],[x+.465,.012,z],[x+.465,.012,z+2.38],[x,.012,z+2.38]],tone,null,true);for(let g=0;g<2;g++)polygon([[x+.12+g*.16,.014,z+.15],[x+.127+g*.16,.014,z+.15],[x+.127+g*.16,.014,z+2.15],[x+.12+g*.16,.014,z+2.15]],'#b7987280',null,false);}
-box(0,0,-5,30,3.5,.3,'#f5efde');for(let z=-5;z<9;z+=.5){box(-15,0,z+.25,.3,3.5,.5,'#e4e8e5');box(15,0,z+.25,.3,3.5,.5,'#e4e8e5');}box(0,0,-4.78,30,.65,.12,'#ad8861');
- for(let x=-15;x<16;x+=.6)box(x,0,-4.69,.035,.65,.08,'#d3b38b');
- rooms.forEach((r,i)=>{const x=(i-(rooms.length-1)/2)*Math.min(4.6,26/Math.max(1,rooms.length-1));box(x,.1,-4.65,2.8,2.8,.2,'#bd946a',r[0]);box(x-1.48,.05,-4.49,.13,2.95,.16,'#967956');box(x+1.48,.05,-4.49,.13,2.95,.16,'#967956');box(x,2.94,-4.49,3.08,.14,.16,'#dfc59d');for(let g=-1.2;g<1.3;g+=.18)box(x+g,.2,-4.535,.012,1.12,.013,'#a77f5544');box(x,3,-4.4,3.5,.4,.12,'#3b4736',r[0]);sign(x,3.2,-4.25,r[2],r[0]);});
+for(const wallZ of [-5,12]){const inward=wallZ<0?1:-1;box(0,0,wallZ,30,3.5,.3,'#f5efde');box(0,0,wallZ+inward*.22,30,.65,.12,'#ad8861');for(let x=-15;x<16;x+=.6)box(x,0,wallZ+inward*.31,.035,.65,.08,'#d3b38b');}for(let z=-5;z<12;z+=.5){box(-15,0,z+.25,.3,3.5,.5,'#e4e8e5');box(15,0,z+.25,.3,3.5,.5,'#e4e8e5');}
+ // Keep the first half in the initial direction, and place the rest behind the camera.
+ const split=Math.ceil(rooms.length/2);
+ for(const [sideRooms,wallZ,inward] of [[rooms.slice(0,split),-5,1],[rooms.slice(split),12,-1]]){
+  const spacing=Math.min(4.6,26/Math.max(1,sideRooms.length-1));
+  sideRooms.forEach((r,i)=>{const x=(i-(sideRooms.length-1)/2)*spacing;
+   box(x,.1,wallZ+inward*.35,2.8,2.8,.2,'#bd946a',r[0]);
+   box(x-1.48,.05,wallZ+inward*.51,.13,2.95,.16,'#967956');box(x+1.48,.05,wallZ+inward*.51,.13,2.95,.16,'#967956');
+   box(x,2.94,wallZ+inward*.51,3.08,.14,.16,'#dfc59d');
+   for(let g=-1.2;g<1.3;g+=.18)box(x+g,.2,wallZ+inward*.465,.012,1.12,.013,'#a77f5544');
+   box(x,3,wallZ+inward*.6,3.5,.4,.12,'#3b4736',r[0]);sign(x,3.2,wallZ+inward*.75,r[2],r[0]);
+  });
+ }
+
  for(let z=-2;z<10;z+=3){box(14.78,.85,z,.1,2.25,2.2,'#a5d9ef');for(const offset of [-1.1,0,1.1])box(14.6,.85,z+offset,.17,2.25,.055,'#f5f4e9');box(14.6,1.95,z,.17,.06,2.2,'#f5f4e9');box(14.56,.8,z,.35,.09,2.35,'#efe5d1');box(14.65,1,z,.16,2,.055,'#87775a');box(-14.8,1,z,.1,1.5,1.8,'#e7d4a2');}
- box(0,3.5,1,30,.1,14,'#dce4e9');polygon([[-15,3.5,-6],[15,3.5,-6],[15,3.5,8],[-15,3.5,8]],'#dce4e9',null,false);for(let x=-10;x<=10;x+=5)box(x,3.35,0,1,.09,.35,'#fff2ca');
- box(-13,.45,5,2,.15,.75,'#9d7850');box(-13,1,5.4,2,.7,.1,'#9d7850');sign(0,1.35,8,'← 校庭へ戻る','yard');
+ box(0,3.5,3.5,30,.1,17.5,'#dce4e9');polygon([[-15,3.5,-5.25],[15,3.5,-5.25],[15,3.5,12.25],[-15,3.5,12.25]],'#dce4e9',null,false);for(let x=-10;x<=10;x+=5)box(x,3.35,0,1,.09,.35,'#fff2ca');
+ box(-13,.45,5,2,.15,.75,'#9d7850');box(-13,1,5.4,2,.7,.1,'#9d7850');sign(-13,1.35,11.4,'← 校庭へ戻る','yard');
 
  // Afternoon window light across the floor and classroom wall.
  for(let z=-2;z<10;z+=3){polygon([[14.4,.027,z-1],[14.4,.027,z+1],[2,.027,z-2],[2,.027,z-4]],'#fff1ba65',null,false);polygon([[14.4,.029,z-.06],[14.4,.029,z+.06],[2,.029,z-2.94],[2,.029,z-3.06]],'#7893a544',null,false);}
  for(let x=-14;x<14;x+=4.6){polygon([[x,.72,-4.35],[x+2.7,.72,-4.35],[x+1.3,2.85,-4.35],[x-.6,2.85,-4.35]],'#fff3bf40',null,false);}
  }
  }
- function setView(next){view=next;eye=next==='hall'?[0,1.65,3.5]:[0,1.7,13];yaw=0;pitch=0;moving.clear();hover=null;geometry();dirty=true;locationLabel.textContent=next==='hall'?'共同開発棟 · 木の廊下':'校庭 · 正面玄関';hint.textContent=next==='hall'?'部屋札または扉をクリックして入室':'玄関をクリックして廊下へ';root.querySelectorAll('[data-campus-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.campusView===next)));}
+ function setView(next){view=next;eye=next==='hall'?[0,1.65,3.5]:[0,1.7,13];yaw=0;pitch=0;moving.clear();hover=null;geometry();dirty=true;locationLabel.textContent=next==='hall'?'共同開発棟 · 木の廊下':'校庭 · 正面玄関';root.querySelector('[data-campus-turn]').disabled=next!=='hall';hint.textContent=next==='hall'?'廊下の両側に教室があります · ドラッグまたは「振り返る」で反対側へ':'玄関をクリックして廊下へ';root.querySelectorAll('[data-campus-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.campusView===next)));}
  function project(point){const x=point[0]-eye[0],y=point[1]-eye[1],z=eye[2]-point[2];const a=x*Math.cos(yaw)-z*Math.sin(yaw),b=x*Math.sin(yaw)+z*Math.cos(yaw),vertical=y*Math.cos(pitch)-b*Math.sin(pitch),depth=y*Math.sin(pitch)+b*Math.cos(pitch);if(depth<.15)return null;const focal=Math.min(width,height)*.94;return {x:width/2+a*focal/depth,y:height*.5-vertical*focal/depth,z:depth};}
  function draw(){const sky=ctx.createLinearGradient(0,0,0,height);sky.addColorStop(0,view==='yard'?'#298cdb':'#cbdce9');sky.addColorStop(1,view==='yard'?'#e2f5ff':'#e8d9bd');ctx.fillStyle=sky;ctx.fillRect(0,0,width,height);if(view==='yard'&&skyArt.complete&&skyArt.naturalWidth){const scale=Math.max(width/skyArt.width,height/skyArt.height),w=skyArt.width*scale,h=skyArt.height*scale;ctx.drawImage(skyArt,(width-w)/2-Math.sin(yaw)*width*.12,(height-h)/2+pitch*height*.3,w,h);}hits=[];
  const visible=[];for(const face of faces){if(face.sprite)face.vertices=spriteVertices(face.sprite);if(face.center){const mid=face.vertices.reduce((a,p)=>a.map((v,i)=>v+p[i]/face.vertices.length),[0,0,0]);if(mid.reduce((sum,v,i)=>sum+(v-face.center[i])*(eye[i]-v),0)<=0)continue;}const points=face.vertices.map(project);if(points.some(p=>!p))continue;visible.push({...face,points,depth:points.reduce((v,p)=>v+p.z,0)/points.length});}visible.sort((a,b)=>b.depth-a.depth);
@@ -69,7 +80,7 @@ box(0,0,-5,30,3.5,.3,'#f5efde');for(let z=-5;z<9;z+=.5){box(-15,0,z+.25,.3,3.5,.
  const keys={w:'forward',ArrowUp:'forward',s:'back',ArrowDown:'back',a:'left',ArrowLeft:'left',d:'right',ArrowRight:'right'};
  canvas.onkeydown=e=>{const direction=keys[e.key]||keys[e.key.toLowerCase()];if(direction){e.preventDefault();moving.add(direction);}};canvas.onkeyup=e=>moving.delete(keys[e.key]||keys[e.key.toLowerCase()]);canvas.onblur=()=>moving.clear();
  root.querySelectorAll('[data-campus-move]').forEach(button=>{button.onpointerdown=e=>{e.preventDefault();button.setPointerCapture(e.pointerId);moving.add(button.dataset.campusMove);};button.onpointerup=button.onpointercancel=()=>moving.delete(button.dataset.campusMove);});
- root.querySelectorAll('[data-campus-view]').forEach(button=>button.onclick=()=>setView(button.dataset.campusView));root.querySelector('[data-campus-full]').onclick=()=>{root.classList.toggle('campus-walk-expanded');dirty=true;};
+ root.querySelector('[data-campus-turn]').onclick=()=>{if(view!=='hall')return;yaw+=Math.PI;pitch=0;moving.clear();hover=null;dirty=true;hint.textContent='部屋札または扉をクリックして入室';};root.querySelectorAll('[data-campus-view]').forEach(button=>button.onclick=()=>setView(button.dataset.campusView));root.querySelector('[data-campus-full]').onclick=()=>{root.classList.toggle('campus-walk-expanded');dirty=true;};
  const escape=e=>{if(e.key==='Escape'){root.classList.remove('campus-walk-expanded');moving.clear();}};document.addEventListener('keydown',escape);
  function dispose(){if(disposed)return;disposed=true;cancelAnimationFrame(frame);observer.disconnect();moving.clear();document.removeEventListener('keydown',escape);}
  setView('yard');resize();frame=requestAnimationFrame(tick);return dispose;
