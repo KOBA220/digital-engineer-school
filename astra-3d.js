@@ -1,4 +1,4 @@
-import * as THREE from './vendor/astra-three.js?v=film-1';
+import * as THREE from './vendor/astra-three.js?v=detail-1';
 
 // All school geometry is built in metres and can be exported as a portable GLB.
 const rooms = [
@@ -16,7 +16,7 @@ const $=id=>document.getElementById(id);
 const canvas=$('campus'),status=$('status');
 const scene=new THREE.Scene();scene.background=new THREE.Color(0xdccce4);scene.fog=new THREE.Fog(0xe8cabe,44,105);
 const model=new THREE.Group();model.name='Astra_Digital_Engineer_School';scene.add(model);
-const camera=new THREE.PerspectiveCamera(72,1,.08,160);camera.rotation.order='YXZ';
+const camera=new THREE.PerspectiveCamera(58,1,.08,160);camera.rotation.order='YXZ';
 let renderer,svgFallback=false;
 try{renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});}
 catch(error){
@@ -30,10 +30,18 @@ catch(error){
 function paintedTexture(){const c=document.createElement('canvas');c.width=c.height=256;const ctx=c.getContext('2d');ctx.fillStyle='#fffaf0';ctx.fillRect(0,0,256,256);let seed=287;const rand=()=>((seed=(1664525*seed+1013904223)>>>0)/4294967296);for(let i=0;i<110;i++){ctx.fillStyle=`rgba(154,130,110,${.015+rand()*.035})`;ctx.beginPath();ctx.ellipse(rand()*256,rand()*256,10+rand()*45,2+rand()*10,rand()*.7,0,Math.PI*2);ctx.fill();}for(let i=0;i<12000;i++){ctx.fillStyle=rand()>.5?'#8978650a':'#ffffff19';ctx.fillRect(rand()*256,rand()*256,1,1);}const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;}
 const wash=paintedTexture();
 const materials=new Map();
-function mat(color,options={}){const key=JSON.stringify([color,options]);if(!materials.has(key)){const c=new THREE.Color(color);c.lerp(new THREE.Color(0xd8b4a2),.075);materials.set(key,new THREE.MeshStandardMaterial({color:c,map:options.transparent?null:wash,roughness:.98,...options}));}return materials.get(key);}
+function mat(color,options={}){const key=JSON.stringify([color,options]);if(!materials.has(key)){const c=new THREE.Color(color);materials.set(key,new THREE.MeshStandardMaterial({color:c,map:options.transparent?null:wash,roughness:.98,...options}));}return materials.get(key);}
 const unitBox=new THREE.BoxGeometry(1,1,1),inkEdges=new THREE.EdgesGeometry(unitBox),ink=new THREE.LineBasicMaterial({color:0x78676a,transparent:true,opacity:.2});
-function box(parent,name,x,y,z,w,h,d,color,options={}){const mesh=new THREE.Mesh(unitBox,mat(color,options));mesh.name=name;mesh.position.set(x,y,z);mesh.scale.set(w,h,d);mesh.castShadow=true;mesh.receiveShadow=true;if(!options.transparent&&Math.max(w,h,d)>.6&&Math.min(w,h,d)>.04&&!name.includes('ceiling')&&!name.includes('Lawn')&&!name.includes('Foundation')){const lines=new THREE.LineSegments(inkEdges,ink);lines.name='Illustrated edges';mesh.add(lines);}parent.add(mesh);return mesh;}
+function box(parent,name,x,y,z,w,h,d,color,options={}){const geometry=(w>5||d>5)&&h>.2?new THREE.BoxGeometry(1,1,1,Math.max(1,Math.ceil(w/1.8)),Math.max(1,Math.ceil(h/.8)),Math.max(1,Math.ceil(d/1.8))):unitBox;const mesh=new THREE.Mesh(geometry,mat(color,options));mesh.name=name;mesh.position.set(x,y,z);mesh.scale.set(w,h,d);mesh.castShadow=true;mesh.receiveShadow=true;if(false){const lines=new THREE.LineSegments(inkEdges,ink);lines.name='Illustrated edges';mesh.add(lines);}parent.add(mesh);return mesh;}
 function sphere(parent,x,y,z,r,color,sx=1,sy=1,sz=1){const m=new THREE.Mesh(new THREE.SphereGeometry(r,12,8),mat(color));m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;parent.add(m);return m;}
+const roundedCache=new Map();
+function roundedPanel(parent,name,x,y,z,w,h,depth,color,rotation=0){
+  const key=[w,h,depth].join(',');let geometry=roundedCache.get(key);
+  if(!geometry){const radius=Math.min(.065,w*.14,h*.14),a=-w/2,b=-h/2,shape=new THREE.Shape();shape.moveTo(a+radius,b);shape.lineTo(a+w-radius,b);shape.quadraticCurveTo(a+w,b,a+w,b+radius);shape.lineTo(a+w,b+h-radius);shape.quadraticCurveTo(a+w,b+h,a+w-radius,b+h);shape.lineTo(a+radius,b+h);shape.quadraticCurveTo(a,b+h,a,b+h-radius);shape.lineTo(a,b+radius);shape.quadraticCurveTo(a,b,a+radius,b);geometry=new THREE.ExtrudeGeometry(shape,{depth,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.007,bevelThickness:.006,curveSegments:4});geometry.translate(0,0,-depth/2);roundedCache.set(key,geometry);}
+  const mesh=new THREE.Mesh(geometry,mat(color,{roughness:.65}));mesh.name=name;mesh.position.set(x,y,z);mesh.rotation.x=rotation;mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;
+}
+const rodGeometry=new THREE.CylinderGeometry(1,1,1,8);
+function tube(parent,name,from,to,radius=.012,color=0x7d8587){const a=new THREE.Vector3(...from),b=new THREE.Vector3(...to),delta=b.clone().sub(a);const mesh=new THREE.Mesh(rodGeometry,mat(color,{metalness:.65,roughness:.32,map:null}));mesh.name=name;mesh.position.copy(a).add(b).multiplyScalar(.5);mesh.scale.set(radius,delta.length(),radius);mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());mesh.castShadow=true;parent.add(mesh);return mesh;}
 function label(parent,text,x,y,z,width,height,rotation=0,bg='#355b49',fg='#fff9dd'){
   const c=document.createElement('canvas');c.width=1024;c.height=Math.round(1024*height/width);const ctx=c.getContext('2d');
   ctx.fillStyle=bg;ctx.fillRect(0,0,c.width,c.height);ctx.strokeStyle=fg+'88';ctx.lineWidth=3;ctx.strokeRect(12,12,c.width-24,c.height-24);
@@ -88,6 +96,19 @@ for(const room of rooms){
   box(g,'Window sill',x,1.04,s*13.45,w,.12,.36,0xe8dfc5);
   for(const edge of [leftEdge,rightEdge])box(walls,'Classroom partition',edge,1.75,s*10.1,.16,3.5,7,0xece4d4);
   box(ceiling,'Classroom ceiling',x,3.55,s*10.1,w,.16,7,0xf5eee0);
+  for(const edge of [leftEdge+.1,rightEdge-.1]){
+    box(g,'Painted skirting board',edge,.085,s*10.1,.065,.17,6.9,0xaaa493);
+    box(g,'Wall cornice',edge,3.36,s*10.1,.07,.085,6.9,0xe2ddcf);
+    box(g,'Electrical outlet plate',edge, .34,s*9.4,.018,.105,.08,0xf8f4e9);
+    for(const yy of [.32,.36])box(g,'Outlet socket',edge+(edge<x?.013:-.013),yy,s*9.4,.012,.016,.034,0x757773);
+  }
+  box(g,'Window radiator',x,.62,s*13.24,w*.6,.5,.17,0xd9d6c9);
+  for(let i=0;i<Math.floor(w*4);i++)box(g,'Radiator fin',x-w*.29+i*.15,.62,s*13.11,.07,.46,.045,0xebe6d8);
+  box(g,'Curtain rail',x,2.91,s*13.38,w-.18,.045,.065,0x989994);
+  for(const edge of [x-w*.42,x+w*.42])for(let i=0;i<4;i++)box(g,'Folded linen curtain',edge+(i-1.5)*.08,1.96,s*(13.35+(i%2)*.04),.075,1.83,.07,0xe6dcca);
+  box(g,'Wall clock frame',x-w*.28,2.78,s*12.99,.3,.3,.045,0x717d78);
+  label(g,'15:30',x-w*.28,2.78,s*12.96,.26,.2,s>0?Math.PI:0,'#f2eee1','#53615d');
+
   buildRoomInterior(g,room);
   // Warm pools of daylight are actual coplanar meshes, portable in the GLB.
   for(let j=0;j<3;j++){
@@ -98,12 +119,19 @@ function buildRoomInterior(g,r){
   const {x,side:s,width:w}=r;
   const B=(name,dx,y,z,bw,bh,bd,color)=>box(g,name,x+dx,y,s*z,bw,bh,bd,color);
   const L=(text,dx,y,z,width=2.8,height=.38,bg='#355b49',fg='#fff9dd')=>label(g,text,x+dx,y,s*z,width,height,s>0?Math.PI:0,bg,fg);
-  const chair=(dx,z,color=r.color)=>{B('Chair seat',dx,.46,z,.52,.08,.52,color);B('Chair back',dx,.84,z+.25,.52,.68,.06,color);for(const a of [-.2,.2])for(const b of [-.2,.2])B('Chair leg',dx+a,.23,z+b,.035,.44,.035,0x6d796e);};
-  const table=(dx,z,bw=2,bd=1.1)=>{B('Work table',dx,.79,z,bw,.1,bd,0xd6b888);for(const a of [-bw/2+.12,bw/2-.12])for(const b of [-bd/2+.12,bd/2-.12])B('Table leg',dx+a,.38,z+b,.07,.72,.07,0x718478);};
+  const chair=(dx,z,color=0xb9996f)=>{
+    roundedPanel(g,'Contoured plywood seat',x+dx,.455,s*z,.44,.43,.027,color,Math.PI/2);
+    const back=roundedPanel(g,'Curved plywood backrest',x+dx,.82,s*(z-.22),.43,.28,.022,color);back.rotation.x=s*.1;
+    for(const a of [-.185,.185])for(const b of [-.17,.17]){tube(g,'Tubular steel chair leg',[x+dx+a,.43,s*(z+b)],[x+dx+a*1.17,.035,s*(z+b*1.2)]);B('Rubber chair foot',dx+a*1.17,.028,z+b*1.2,.04,.035,.04,0x3d4546);}
+    for(const a of [-.185,.185])tube(g,'Backrest upright',[x+dx+a,.4,s*(z-.17)],[x+dx+a,.88,s*(z-.235)]);
+    tube(g,'Chair lower brace',[x+dx-.185,.22,s*(z+.17)],[x+dx+.185,.22,s*(z+.17)],.009);
+    for(const a of [-.155,.155])B('Backrest screw',dx+a,.82,z-.236,.012,.012,.006,0xb0b3b0);
+  };
+  const table=(dx,z,bw=2,bd=1.1)=>{B('Work table',dx,.745,z,bw,.065,bd,0xc9aa7b);for(const a of [-bw/2+.12,bw/2-.12])for(const b of [-bd/2+.12,bd/2-.12])B('Table leg',dx+a,.38,z+b,.07,.72,.07,0x718478);};
   const screen=(dx,z,text,color=0x78afa6)=>{B('Monitor',dx,1.23,z,1.08,.66,.08,0x53665e);B('Monitor stand',dx,.94,z,.06,.25,.08,0x53665e);B('Monitor base',dx,.84,z,.3,.04,.22,0x53665e);B('Monitor image',dx,1.23,z-.055,.95,.54,.015,color);L(text,dx,1.23,z-.067,.88,.33,'#294f48');B('Keyboard',dx,.855,z-.34,.65,.035,.2,0x8d9991);};
   const board=(title,items)=>{B('Purpose board',w*.26,1.94,12.99,w*.43,1.45,.08,r.color);L(title,w*.26,2.42,12.93,w*.38,.3);items.forEach((t,i)=>L(t,w*.26,2.08-i*.28,12.93,w*.36,.23,'#f3edda','#355b49'));};
   L(r.name,0,3.06,12.96,Math.min(w-1,4.6),.4);
-  B('Room accent rug',.25,.004,10.45,w*.69,.012,4.5,r.color);
+
   if(r.id==='dev'){
     for(const dx of [-.25,w*.27])for(const z of [9,11.2]){table(dx,z,1.7,.95);chair(dx,z-1);screen(dx,z+.14,'CODE  { }');}
     B('Server cabinet',-w*.4,1,11.6,.55,2,1,0x59685e);for(let i=0;i<7;i++){B('Server rack',-w*.4,.35+i*.2,11.08,.45,.13,.035,0x39493f);B('Server light',-w*.48,.35+i*.2,11.05,.035,.035,.025,0x9ce29b);}board('共同開発',['設計 → 実装 → テスト','コードレビュー']);
@@ -190,7 +218,7 @@ function reset(){mode='hall';ceiling.visible=true;camera.position.set(0,1.65,5.2
 function overview(){mode='overview';ceiling.visible=false;moving.clear();$('location').textContent='校舎全体 · 屋根を外した俯瞰';$('overview').classList.add('active');$('reset').classList.remove('active');$('instructions').textContent='ドラッグ・左右の回転ボタンで回す ／ ホイール・前後ボタンで拡大縮小 ／ 教室を選ぶ';closeCard();dirty=true;}
 function selectRoom(room){selected=room;$('room-card').hidden=false;$('room-number').textContent=`ROOM ${String(room.index+1).padStart(2,'0')} / ${room.side<0?'正面の教室':'反対側の教室'}`;$('room-name').textContent=room.name;$('room-description').textContent=room.text+' 内装：'+room.layout+'。';$('open-room').href=`./#r=${room.id}`;document.querySelectorAll('[data-room]').forEach(b=>b.classList.toggle('selected',b.dataset.room===room.id));status.textContent=`${room.name}を選択しました。「教室の中を見る」で室内へ移動できます。`;dirty=true;}
 function closeCard(){$('room-card').hidden=true;document.querySelectorAll('[data-room]').forEach(b=>b.classList.remove('selected'));selected=null;}
-function visit(){if(!selected)return;const room=selected;mode='room';ceiling.visible=true;camera.position.set(room.x+.1,1.65,room.side*7.6);yaw=room.side>0?Math.PI:0;pitch=-.08;moving.clear();$('location').textContent=`ROOM ${String(room.index+1).padStart(2,'0')} · ${room.name}`;status.textContent=`${room.name}の室内です。「廊下へ」で中央廊下に戻れます。`;$('reset').classList.remove('active');$('overview').classList.remove('active');$('room-card').hidden=true;dirty=true;}
+function visit(){if(!selected)return;const room=selected;mode='room';ceiling.visible=true;camera.position.set(room.x+.1,1.65,room.side*7.6);yaw=room.side>0?Math.PI:0;pitch=-.16;moving.clear();$('location').textContent=`ROOM ${String(room.index+1).padStart(2,'0')} · ${room.name}`;status.textContent=`${room.name}の室内です。「廊下へ」で中央廊下に戻れます。`;$('reset').classList.remove('active');$('overview').classList.remove('active');$('room-card').hidden=true;dirty=true;}
 $('room-list').innerHTML=rooms.map(r=>`<button data-room="${r.id}"><small>${String(r.index+1).padStart(2,'0')} · ${r.side<0?'FRONT':'BACK'}</small>${r.name}</button>`).join('');
 document.querySelectorAll('[data-room]').forEach(b=>b.addEventListener('click',()=>{const room=rooms.find(r=>r.id===b.dataset.room);if(!renderer){location.href=`./#r=${room.id}`;return;}selectRoom(room);}));
 $('reset').onclick=reset;$('overview').onclick=overview;$('turn').onclick=()=>{if(mode==='overview')overviewAngle+=Math.PI;else{yaw+=Math.PI;pitch=0;}moving.clear();dirty=true;};$('close-card').onclick=closeCard;$('visit').onclick=visit;
@@ -223,7 +251,7 @@ if(svgFallback){
   });
   floor.visible=false;floor.userData.svgGround=true;
   const boards=new THREE.Group();boards.name='Painted floor tiles';model.add(boards);
-  const tileGeometry=new THREE.PlaneGeometry(1.19,1.69),tileMaterials=[0xbba38f,0xc4ad96,0xbca28c,0xc9b09a].map(color=>mat(color));
+  const tileGeometry=new THREE.PlaneGeometry(1.19,1.69),tileMaterials=[0xbda38f,0xbea491,0xbba18e,0xc1a792].map(color=>mat(color));
   for(let ix=0;ix<28;ix++)for(let iz=0;iz<16;iz++){const tile=new THREE.Mesh(tileGeometry,tileMaterials[(ix*7+iz*3)%4]);tile.rotation.x=-Math.PI/2;tile.position.set(-16.2+ix*1.2,-.013,-12.75+iz*1.7);boards.add(tile);}
 
 }
@@ -245,7 +273,7 @@ function updateFallbackLabels(){
 if(renderer&&!svgFallback){renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.02;}
 if(renderer){
   const resize=()=>{const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();dirty=true;};new ResizeObserver(resize).observe(canvas);
-  reset();resize();status.textContent=(svgFallback?'アニメ映画風の軽量表示です。':'アニメ映画風の校舎です。')+'正面に5教室、振り返ると4教室。GLBモデルも保存できます。';
+  reset();resize();status.textContent=(svgFallback?'細部を追加した軽量表示です。':'家具と壁の細部を更新しました。')+'正面に5教室、振り返ると4教室。GLBモデルも保存できます。';
   const tick=time=>{move(Math.min((time-lastTime)/1000,.05)||0);lastTime=time;if(dirty&&!document.hidden){updateCamera();renderer.render(scene,camera);if(svgFallback)updateFallbackLabels();dirty=false;}requestAnimationFrame(tick);};requestAnimationFrame(tick);
   canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();$('error').hidden=false;$('error').textContent='3D描画が中断されました。ページを再読み込みしてください。';});
   // Read-only diagnostic surface used by the local visual smoke test.

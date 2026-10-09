@@ -5,5 +5,5 @@
 
 /* A restrained colour wash and paper grain belong to the picture, not the controls. */
 #viewport::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:1;background:radial-gradient(ellipse at 88% 28%,#ffdfae38,transparent 58%),linear-gradient(180deg,#8587af10,transparent 38%,#a0757520);mix-blend-mode:soft-light}
-.svg-scene{background:linear-gradient(#a8b4cd,#ddc9d0 55%,#f0d4bb)!important;filter:saturate(.82) contrast(.96)}
+.svg-scene{background:linear-gradient(#a8b4cd,#ddc9d0 55%,#f0d4bb)!important;filter:saturate(.97) contrast(1.02)}
 .scene-title{color:#4d525c}.scene-title h1{letter-spacing:.18em}.projected-label{box-shadow:0 1px 3px #5d486517;border-color:#ead9c880}.topbar,.room-dock{background:#f3ede4}.model-note{color:#686479}
