@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "python3 -m http.server 4173",
-    "check": "node --check editing-room.js && node --check office-file.js && node --check office-edit-data.js && node --check team-work.js && node --check app.js && node --check store.js && node --check canvas.js && node --check ai.js && node --check campus3d.js && node --check community-data.js && node --check community-chat.js && node --check study-bank.js && node --check study-room.js && node --check presentation-catalog.js && node --check presentation-room.js && node --check scripts/presentation-assets.mjs && node --check astra-3d.js",
+    "check": "node --check editing-room.js && node --check office-file.js && node --check office-edit-data.js && node --check team-work.js && node --check app.js && node --check store.js && node --check canvas.js && node --check ai.js && node --check campus3d.js && node --check community-data.js && node --check community-chat.js && node --check study-bank.js && node --check study-room.js && node --check presentation-catalog.js && node --check presentation-room.js && node --check scripts/presentation-assets.mjs && node --check astra-3d.js && node --check painted-renderer.js",
     "build": "node scripts/build.mjs",
     "test": "node --test tests/store.test.mjs tests/config.test.mjs tests/study.test.mjs tests/presentation.test.mjs tests/team-work.test.mjs tests/office-file.test.mjs tests/office-sync.test.mjs tests/editing-room.test.mjs",
     "test:db": "node tests/database.test.mjs",

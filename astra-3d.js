@@ -1,4 +1,5 @@
-import * as THREE from './vendor/astra-three.js?v=detail-1';
+import {PaintedRenderer} from './painted-renderer.js?v=anime-2';
+import * as THREE from './vendor/astra-three.js?v=anime-2';
 
 // All school geometry is built in metres and can be exported as a portable GLB.
 const rooms = [
@@ -20,10 +21,10 @@ const camera=new THREE.PerspectiveCamera(58,1,.08,160);camera.rotation.order='YX
 let renderer,svgFallback=false;
 try{renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});}
 catch(error){
-  svgFallback=true;renderer=new THREE.SVGRenderer();renderer.setQuality('low');renderer.setPrecision(2);
+  svgFallback=true;renderer=new PaintedRenderer();renderer.setQuality('low');renderer.setPrecision(2);
   renderer.domElement.classList.add('svg-scene');renderer.domElement.setAttribute('aria-hidden','true');
   $('viewport').insertBefore(renderer.domElement,canvas);canvas.classList.add('svg-input');
-  document.querySelector('.model-note').textContent='放課後の校舎 · 軽量表示';
+  document.querySelector('.model-note').textContent='アニメ背景美術 · テクスチャ表示';
 }
 
 // Deterministic painted washes make surfaces feel illustrated while preserving real geometry.
@@ -130,7 +131,7 @@ function buildRoomInterior(g,r){
   const table=(dx,z,bw=2,bd=1.1)=>{B('Work table',dx,.745,z,bw,.065,bd,0xc9aa7b);for(const a of [-bw/2+.12,bw/2-.12])for(const b of [-bd/2+.12,bd/2-.12])B('Table leg',dx+a,.38,z+b,.07,.72,.07,0x718478);};
   const screen=(dx,z,text,color=0x78afa6)=>{B('Monitor',dx,1.23,z,1.08,.66,.08,0x53665e);B('Monitor stand',dx,.94,z,.06,.25,.08,0x53665e);B('Monitor base',dx,.84,z,.3,.04,.22,0x53665e);B('Monitor image',dx,1.23,z-.055,.95,.54,.015,color);L(text,dx,1.23,z-.067,.88,.33,'#294f48');B('Keyboard',dx,.855,z-.34,.65,.035,.2,0x8d9991);};
   const board=(title,items)=>{B('Purpose board',w*.26,1.94,12.99,w*.43,1.45,.08,r.color);L(title,w*.26,2.42,12.93,w*.38,.3);items.forEach((t,i)=>L(t,w*.26,2.08-i*.28,12.93,w*.36,.23,'#f3edda','#355b49'));};
-  L(r.name,0,3.06,12.96,Math.min(w-1,4.6),.4);
+  L(r.name,0,2.98,12.96,Math.min(w-1,2.5),.24);
 
   if(r.id==='dev'){
     for(const dx of [-.25,w*.27])for(const z of [9,11.2]){table(dx,z,1.7,.95);chair(dx,z-1);screen(dx,z+.14,'CODE  { }');}
@@ -202,7 +203,7 @@ for(let i=0;i<16;i++){const angle=i*Math.PI*2/16;tree(landscape,Math.cos(angle)*
 function plant(parent,x,z,size){const pot=new THREE.Mesh(new THREE.CylinderGeometry(.28*size,.21*size,.42*size,10),mat(0xc39171));pot.position.set(x,.21*size,z);parent.add(pot);for(let i=0;i<5;i++)sphere(parent,x+Math.sin(i*2.4)*.17*size,.6*size+(i%2)*.22*size,z+Math.cos(i*2.4)*.17*size,.26*size,[0x658b5d,0x80a06a,0x98af7a][i%3],.65,1.8,.65);}
 function tree(parent,x,z,s){box(parent,'Tree trunk',x,1.5*s,z,.36*s,3*s,.36*s,0x96815d);for(let i=0;i<5;i++)sphere(parent,x+Math.sin(i*2.4)*1.1*s,3.4*s+(i%2)*.8*s,z+Math.cos(i*2.4)*1.1*s,1.6*s,[0x93b77d,0xa7c78a,0x7da26e,0xb0ca90][i%4],1,1.1,1);}
 for(let i=0;i<9;i++)sphere(landscape,(i-4)*11,22+(i%3)*3,-42,3.5,0xffffff,2.3,.6,1.1);
-const skyCanvas=document.createElement('canvas');skyCanvas.width=1024;skyCanvas.height=512;const skyContext=skyCanvas.getContext('2d');const skyGradient=skyContext.createLinearGradient(0,0,0,512);skyGradient.addColorStop(0,'#879bbc');skyGradient.addColorStop(.48,'#c9c5dc');skyGradient.addColorStop(.78,'#edc9bb');skyGradient.addColorStop(1,'#f4debf');skyContext.fillStyle=skyGradient;skyContext.fillRect(0,0,1024,512);for(let i=0;i<24;i++){const px=(i*173)%1080,py=180+(i*37)%160;skyContext.fillStyle=i%2?'#fff1da70':'#fae5d559';skyContext.beginPath();skyContext.ellipse(px,py,80+i%3*25,7+i%4*3,-.04,0,Math.PI*2);skyContext.fill();}const skyTexture=new THREE.CanvasTexture(skyCanvas);skyTexture.colorSpace=THREE.SRGBColorSpace;if(!svgFallback)scene.background=skyTexture;
+const skyCanvas=document.createElement('canvas');skyCanvas.width=1024;skyCanvas.height=512;const skyContext=skyCanvas.getContext('2d');const skyGradient=skyContext.createLinearGradient(0,0,0,512);skyGradient.addColorStop(0,'#879bbc');skyGradient.addColorStop(.48,'#c9c5dc');skyGradient.addColorStop(.78,'#edc9bb');skyGradient.addColorStop(1,'#f4debf');skyContext.fillStyle=skyGradient;skyContext.fillRect(0,0,1024,512);for(let i=0;i<24;i++){const px=(i*173)%1080,py=180+(i*37)%160;skyContext.fillStyle=i%2?'#fff1da70':'#fae5d559';skyContext.beginPath();skyContext.ellipse(px,py,80+i%3*25,7+i%4*3,-.04,0,Math.PI*2);skyContext.fill();}const skyTexture=new THREE.CanvasTexture(skyCanvas);skyTexture.colorSpace=THREE.SRGBColorSpace;scene.background=skyTexture;
 // Long, soft-looking sunlight on the floor is visible in both renderers.
 for(const side of [-1,1])for(let i=0;i<5;i++){const patch=box(model,'Evening window light',(i-2)*6,0.014,side*3.4,1.6,.009,4.8,0xffdfae,{transparent:true,opacity:.19,depthWrite:false});patch.rotation.y=side*.42;patch.castShadow=false;}
 const hemi=new THREE.HemisphereLight(0xdadff4,0x927d91,1.65);scene.add(hemi);
@@ -241,7 +242,7 @@ if(svgFallback){
   scene.add(new THREE.AmbientLight(0xe8d9da,.4));sun.intensity=.68;fill.intensity=.32;
   scene.traverse(object=>{if(object.isPointLight)object.intensity=0;});
   model.traverse(object=>{
-    if(object.isMesh&&typeof object.userData.label==='object'){
+    if(false&&object.isMesh&&typeof object.userData.label==='object'){
       const {text,bg,fg}=object.userData.label;
       const node=document.createElement('span');node.className='projected-label';node.textContent=text;node.style.background=bg;node.style.color=fg;
       $('viewport').insertBefore(node,canvas);fallbackLabels.push({object,node});
@@ -252,7 +253,7 @@ if(svgFallback){
   floor.visible=false;floor.userData.svgGround=true;
   const boards=new THREE.Group();boards.name='Painted floor tiles';model.add(boards);
   const tileGeometry=new THREE.PlaneGeometry(1.19,1.69),tileMaterials=[0xbda38f,0xbea491,0xbba18e,0xc1a792].map(color=>mat(color));
-  for(let ix=0;ix<28;ix++)for(let iz=0;iz<16;iz++){const tile=new THREE.Mesh(tileGeometry,tileMaterials[(ix*7+iz*3)%4]);tile.rotation.x=-Math.PI/2;tile.position.set(-16.2+ix*1.2,-.013,-12.75+iz*1.7);boards.add(tile);}
+  for(let ix=0;ix<28;ix++)for(let iz=0;iz<16;iz++){const tile=new THREE.Mesh(tileGeometry,tileMaterials[(ix*7+iz*3)%4]);tile.name='Painted floor plank';tile.rotation.x=-Math.PI/2;tile.position.set(-16.2+ix*1.2,-.013,-12.75+iz*1.7);boards.add(tile);}
 
 }
 function updateFallbackLabels(){
@@ -270,10 +271,28 @@ function updateFallbackLabels(){
     node.style.fontSize=`${Math.max(7,Math.min(height*px*.52,width*px/(node.textContent.length*.99)))}px`;
   }
 }
+// Generated background-art textures are cropped in the browser, without changing source art.
+let materialArtReady=false;
+const artImage=new Image();artImage.src='./assets/anime-material-atlas.png';
+artImage.onload=()=>{
+  const textures=[];
+  for(let i=0;i<4;i++){const tile=document.createElement('canvas');tile.width=tile.height=512;tile.getContext('2d').drawImage(artImage,(i%2)*artImage.width/2,Math.floor(i/2)*artImage.height/2,artImage.width/2,artImage.height/2,0,0,512,512);const texture=new THREE.CanvasTexture(tile);texture.colorSpace=THREE.SRGBColorSpace;texture.wrapS=texture.wrapT=THREE.RepeatWrapping;textures.push(texture);}
+  const [plaster,wood,leaves,sky]=textures;scene.background=sky;
+  model.traverse(mesh=>{
+    if(!mesh.isMesh||mesh.userData.label)return;const name=mesh.name.toLowerCase();let texture;
+    if(/wall|plaster|ceiling|partition|cornice/.test(name)&&!/board|window|outlet/.test(name))texture=plaster;
+    else if(/table|desk top|plywood|door|bench|wood|floor|book shelf/.test(name))texture=wood;
+    else if(mesh.geometry.type==='SphereGeometry')texture=leaves;
+    if(texture){mesh.material=mesh.material.clone();mesh.material.map=texture;mesh.material.color.set(/sphere/.test(mesh.geometry.type.toLowerCase())?0xffffff:/floor|plywood|table|wood|door|bench/.test(name)?0xffeed5:0xfff5e6);mesh.material.needsUpdate=true;}
+  });
+  floor.material.map=wood;floor.material.color.set(0xffeace);floor.material.needsUpdate=true;
+  materialArtReady=true;dirty=true;status.textContent='手描きの背景美術風テクスチャを反映しました。ドラッグで見回せます。';
+};
+artImage.onerror=()=>{status.textContent='背景素材の読み込みに失敗しました。再読み込みすると再試行できます。';};
 if(renderer&&!svgFallback){renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.02;}
 if(renderer){
   const resize=()=>{const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();dirty=true;};new ResizeObserver(resize).observe(canvas);
-  reset();resize();status.textContent=(svgFallback?'細部を追加した軽量表示です。':'家具と壁の細部を更新しました。')+'正面に5教室、振り返ると4教室。GLBモデルも保存できます。';
+  reset();resize();status.textContent=(svgFallback?'素材画像に対応した3D表示です。':'アニメ背景美術風の校舎です。')+'正面に5教室、振り返ると4教室。GLBモデルも保存できます。';
   const tick=time=>{move(Math.min((time-lastTime)/1000,.05)||0);lastTime=time;if(dirty&&!document.hidden){updateCamera();renderer.render(scene,camera);if(svgFallback)updateFallbackLabels();dirty=false;}requestAnimationFrame(tick);};requestAnimationFrame(tick);
   canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();$('error').hidden=false;$('error').textContent='3D描画が中断されました。ページを再読み込みしてください。';});
   // Read-only diagnostic surface used by the local visual smoke test.

@@ -5,7 +5,7 @@ import {validateConfig} from './validate-config.mjs';
 const environmentConfigured=Boolean(process.env.SCHOOL_SUPABASE_URL||process.env.SCHOOL_SUPABASE_KEY);
 const validated=validateConfig(environmentConfigured?{...config,supabaseUrl:process.env.SCHOOL_SUPABASE_URL,supabasePublishableKey:process.env.SCHOOL_SUPABASE_KEY}:config);
 await rm('dist', {recursive:true, force:true}); await mkdir('dist');
-for (const file of ['index.html','campus-preview.html','astra-3d-preview.html','astra-3d.css','astra-3d.js','style.css','app.js','store.js','canvas.js','attachments.js','ai.js','campus3d.js','community-data.js','community-chat.js','study-bank.js','study-room.js','presentation-catalog.js','presentation-room.js','team-work.js','editing-room.js','office-file.js','office-edit-data.js','vendor','config.js','assets','templates']) await cp(file,`dist/${file}`,{recursive:true});
+for (const file of ['index.html','campus-preview.html','astra-3d-preview.html','astra-3d.css','astra-3d.js','painted-renderer.js','style.css','app.js','store.js','canvas.js','attachments.js','ai.js','campus3d.js','community-data.js','community-chat.js','study-bank.js','study-room.js','presentation-catalog.js','presentation-room.js','team-work.js','editing-room.js','office-file.js','office-edit-data.js','vendor','config.js','assets','templates']) await cp(file,`dist/${file}`,{recursive:true});
 await assemblePresentationAssets('dist');
 await writeFile('dist/config.js',`export const config=${JSON.stringify(validated)};`);
 console.log('Static site built in dist/');
