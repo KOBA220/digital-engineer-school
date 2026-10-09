@@ -1,4 +1,4 @@
-import * as THREE from './vendor/astra-three.js?v=astra-5';
+import * as THREE from './vendor/astra-three.js?v=film-1';
 
 // All school geometry is built in metres and can be exported as a portable GLB.
 const rooms = [
@@ -14,7 +14,7 @@ const rooms = [
 ].map((r,i)=>({...r,index:i,side:i<5?-1:1,x:i<5?(i-2)*6.6:(i-6.5)*8.25,width:i<5?6.6:8.25}));
 const $=id=>document.getElementById(id);
 const canvas=$('campus'),status=$('status');
-const scene=new THREE.Scene();scene.background=new THREE.Color(0xc8e3ed);scene.fog=new THREE.Fog(0xd4e8eb,48,115);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0xdccce4);scene.fog=new THREE.Fog(0xe8cabe,44,105);
 const model=new THREE.Group();model.name='Astra_Digital_Engineer_School';scene.add(model);
 const camera=new THREE.PerspectiveCamera(72,1,.08,160);camera.rotation.order='YXZ';
 let renderer,svgFallback=false;
@@ -23,14 +23,17 @@ catch(error){
   svgFallback=true;renderer=new THREE.SVGRenderer();renderer.setQuality('low');renderer.setPrecision(2);
   renderer.domElement.classList.add('svg-scene');renderer.domElement.setAttribute('aria-hidden','true');
   $('viewport').insertBefore(renderer.domElement,canvas);canvas.classList.add('svg-input');
-  document.querySelector('.model-note').textContent='Astra · 3D / 軽量表示';
+  document.querySelector('.model-note').textContent='放課後の校舎 · 軽量表示';
 }
 
+// Deterministic painted washes make surfaces feel illustrated while preserving real geometry.
+function paintedTexture(){const c=document.createElement('canvas');c.width=c.height=256;const ctx=c.getContext('2d');ctx.fillStyle='#fffaf0';ctx.fillRect(0,0,256,256);let seed=287;const rand=()=>((seed=(1664525*seed+1013904223)>>>0)/4294967296);for(let i=0;i<110;i++){ctx.fillStyle=`rgba(154,130,110,${.015+rand()*.035})`;ctx.beginPath();ctx.ellipse(rand()*256,rand()*256,10+rand()*45,2+rand()*10,rand()*.7,0,Math.PI*2);ctx.fill();}for(let i=0;i<12000;i++){ctx.fillStyle=rand()>.5?'#8978650a':'#ffffff19';ctx.fillRect(rand()*256,rand()*256,1,1);}const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;}
+const wash=paintedTexture();
 const materials=new Map();
-function mat(color,options={}){const key=JSON.stringify([color,options]);if(!materials.has(key))materials.set(key,new THREE.MeshStandardMaterial({color,roughness:.86,...options}));return materials.get(key);}
-const unitBox=new THREE.BoxGeometry(1,1,1);
-function box(parent,name,x,y,z,w,h,d,color,options={}){const mesh=new THREE.Mesh(unitBox,mat(color,options));mesh.name=name;mesh.position.set(x,y,z);mesh.scale.set(w,h,d);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;}
-function sphere(parent,x,y,z,r,color,sx=1,sy=1,sz=1){const m=new THREE.Mesh(new THREE.IcosahedronGeometry(r,2),mat(color));m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;parent.add(m);return m;}
+function mat(color,options={}){const key=JSON.stringify([color,options]);if(!materials.has(key)){const c=new THREE.Color(color);c.lerp(new THREE.Color(0xd8b4a2),.075);materials.set(key,new THREE.MeshStandardMaterial({color:c,map:options.transparent?null:wash,roughness:.98,...options}));}return materials.get(key);}
+const unitBox=new THREE.BoxGeometry(1,1,1),inkEdges=new THREE.EdgesGeometry(unitBox),ink=new THREE.LineBasicMaterial({color:0x78676a,transparent:true,opacity:.2});
+function box(parent,name,x,y,z,w,h,d,color,options={}){const mesh=new THREE.Mesh(unitBox,mat(color,options));mesh.name=name;mesh.position.set(x,y,z);mesh.scale.set(w,h,d);mesh.castShadow=true;mesh.receiveShadow=true;if(!options.transparent&&Math.max(w,h,d)>.6&&Math.min(w,h,d)>.04&&!name.includes('ceiling')&&!name.includes('Lawn')&&!name.includes('Foundation')){const lines=new THREE.LineSegments(inkEdges,ink);lines.name='Illustrated edges';mesh.add(lines);}parent.add(mesh);return mesh;}
+function sphere(parent,x,y,z,r,color,sx=1,sy=1,sz=1){const m=new THREE.Mesh(new THREE.SphereGeometry(r,12,8),mat(color));m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;parent.add(m);return m;}
 function label(parent,text,x,y,z,width,height,rotation=0,bg='#355b49',fg='#fff9dd'){
   const c=document.createElement('canvas');c.width=1024;c.height=Math.round(1024*height/width);const ctx=c.getContext('2d');
   ctx.fillStyle=bg;ctx.fillRect(0,0,c.width,c.height);ctx.strokeStyle=fg+'88';ctx.lineWidth=3;ctx.strokeRect(12,12,c.width-24,c.height-24);
@@ -38,8 +41,8 @@ function label(parent,text,x,y,z,width,height,rotation=0,bg='#355b49',fg='#fff9d
   const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
   const mesh=new THREE.Mesh(new THREE.PlaneGeometry(width,height),new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide}));mesh.position.set(x,y,z);mesh.rotation.y=rotation;mesh.userData.label={text,width,height,bg,fg};parent.add(mesh);return mesh;
 }
-function woodTexture(){const c=document.createElement('canvas');c.width=512;c.height=512;const ctx=c.getContext('2d');let seed=92;const rand=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);ctx.fillStyle='#c99d6a';ctx.fillRect(0,0,512,512);for(let row=0;row<8;row++){const y=row*64;ctx.fillStyle=['#c89f70','#d4ae7f','#c49b6c','#dabb8b'][row%4];ctx.fillRect(0,y,512,63);ctx.fillStyle='#a6805555';ctx.fillRect((row%2)*256,y,2,64);for(let i=0;i<18;i++){ctx.strokeStyle=rand()>.5?'#99734426':'#f1d8a52c';ctx.beginPath();const yy=y+rand()*62;ctx.moveTo(0,yy);ctx.bezierCurveTo(130,yy+rand()*5,360,yy-rand()*5,512,yy+rand()*3);ctx.stroke();}}const texture=new THREE.CanvasTexture(c);texture.wrapS=texture.wrapT=THREE.RepeatWrapping;texture.repeat.set(11,8);texture.colorSpace=THREE.SRGBColorSpace;return texture;}
-const floorMaterial=new THREE.MeshStandardMaterial({map:woodTexture(),roughness:.72,color:0xfff0d6});
+function woodTexture(){const c=document.createElement('canvas');c.width=512;c.height=512;const ctx=c.getContext('2d');let seed=92;const rand=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);ctx.fillStyle='#b68b71';ctx.fillRect(0,0,512,512);for(let row=0;row<8;row++){const y=row*64;ctx.fillStyle=['#b78e76','#c09c80','#b48b72','#c7a58b'][row%4];ctx.fillRect(0,y,512,63);ctx.fillStyle='#a6805555';ctx.fillRect((row%2)*256,y,2,64);for(let i=0;i<18;i++){ctx.strokeStyle=rand()>.5?'#99734426':'#f1d8a52c';ctx.beginPath();const yy=y+rand()*62;ctx.moveTo(0,yy);ctx.bezierCurveTo(130,yy+rand()*5,360,yy-rand()*5,512,yy+rand()*3);ctx.stroke();}}const texture=new THREE.CanvasTexture(c);texture.wrapS=texture.wrapT=THREE.RepeatWrapping;texture.repeat.set(8,7);texture.colorSpace=THREE.SRGBColorSpace;return texture;}
+const floorMaterial=new THREE.MeshStandardMaterial({map:woodTexture(),roughness:.98,color:0xf2d8b8});
 const floor=new THREE.Mesh(new THREE.BoxGeometry(33.6,.2,28),floorMaterial);floor.position.y=-.12;floor.receiveShadow=true;model.add(floor);
 const ceiling=new THREE.Group();ceiling.name='Ceilings_hidden_in_overview';model.add(ceiling);
 box(ceiling,'Corridor ceiling',0,3.55,0,33.6,.16,14,0xf5eee0);
@@ -171,9 +174,12 @@ for(let i=0;i<16;i++){const angle=i*Math.PI*2/16;tree(landscape,Math.cos(angle)*
 function plant(parent,x,z,size){const pot=new THREE.Mesh(new THREE.CylinderGeometry(.28*size,.21*size,.42*size,10),mat(0xc39171));pot.position.set(x,.21*size,z);parent.add(pot);for(let i=0;i<5;i++)sphere(parent,x+Math.sin(i*2.4)*.17*size,.6*size+(i%2)*.22*size,z+Math.cos(i*2.4)*.17*size,.26*size,[0x658b5d,0x80a06a,0x98af7a][i%3],.65,1.8,.65);}
 function tree(parent,x,z,s){box(parent,'Tree trunk',x,1.5*s,z,.36*s,3*s,.36*s,0x96815d);for(let i=0;i<5;i++)sphere(parent,x+Math.sin(i*2.4)*1.1*s,3.4*s+(i%2)*.8*s,z+Math.cos(i*2.4)*1.1*s,1.6*s,[0x93b77d,0xa7c78a,0x7da26e,0xb0ca90][i%4],1,1.1,1);}
 for(let i=0;i<9;i++)sphere(landscape,(i-4)*11,22+(i%3)*3,-42,3.5,0xffffff,2.3,.6,1.1);
-const hemi=new THREE.HemisphereLight(0xe5f5ff,0xbda984,2.1);scene.add(hemi);
-const sun=new THREE.DirectionalLight(0xffedc3,2.7);sun.position.set(25,28,18);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-28,right:28,top:25,bottom:-25,near:1,far:90});sun.shadow.bias=-.0005;sun.shadow.normalBias=.035;scene.add(sun);
-const fill=new THREE.DirectionalLight(0xdaedff,.8);fill.position.set(-18,10,-20);scene.add(fill);
+const skyCanvas=document.createElement('canvas');skyCanvas.width=1024;skyCanvas.height=512;const skyContext=skyCanvas.getContext('2d');const skyGradient=skyContext.createLinearGradient(0,0,0,512);skyGradient.addColorStop(0,'#879bbc');skyGradient.addColorStop(.48,'#c9c5dc');skyGradient.addColorStop(.78,'#edc9bb');skyGradient.addColorStop(1,'#f4debf');skyContext.fillStyle=skyGradient;skyContext.fillRect(0,0,1024,512);for(let i=0;i<24;i++){const px=(i*173)%1080,py=180+(i*37)%160;skyContext.fillStyle=i%2?'#fff1da70':'#fae5d559';skyContext.beginPath();skyContext.ellipse(px,py,80+i%3*25,7+i%4*3,-.04,0,Math.PI*2);skyContext.fill();}const skyTexture=new THREE.CanvasTexture(skyCanvas);skyTexture.colorSpace=THREE.SRGBColorSpace;if(!svgFallback)scene.background=skyTexture;
+// Long, soft-looking sunlight on the floor is visible in both renderers.
+for(const side of [-1,1])for(let i=0;i<5;i++){const patch=box(model,'Evening window light',(i-2)*6,0.014,side*3.4,1.6,.009,4.8,0xffdfae,{transparent:true,opacity:.19,depthWrite:false});patch.rotation.y=side*.42;patch.castShadow=false;}
+const hemi=new THREE.HemisphereLight(0xdadff4,0x927d91,1.65);scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xffcf97,2.1);sun.position.set(30,14,22);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-28,right:28,top:25,bottom:-25,near:1,far:90});sun.shadow.bias=-.0005;sun.shadow.normalBias=.035;scene.add(sun);
+const fill=new THREE.DirectionalLight(0xa7bfd8,.65);fill.position.set(-18,10,-20);scene.add(fill);
 // A small, low-intensity light in each room keeps interior details legible.
 for(const r of rooms){const light=new THREE.PointLight(0xffedcd,7,10,2);light.position.set(r.x,2.8,r.side*10);scene.add(light);}
 
@@ -204,7 +210,7 @@ $('download').onclick=async()=>{const button=$('download');button.disabled=true;
 const fallbackLabels=[];
 if(svgFallback){
   for(const name of ['Lawn','Path','Foundation']){const ground=landscape.getObjectByName(name);ground.visible=false;ground.userData.svgGround=true;}
-  scene.add(new THREE.AmbientLight(0xfff5e5,.72));sun.intensity=.72;fill.intensity=.2;
+  scene.add(new THREE.AmbientLight(0xe8d9da,.4));sun.intensity=.68;fill.intensity=.32;
   scene.traverse(object=>{if(object.isPointLight)object.intensity=0;});
   model.traverse(object=>{
     if(object.isMesh&&typeof object.userData.label==='object'){
@@ -215,10 +221,11 @@ if(svgFallback){
     }
     if(object.geometry?.type==='IcosahedronGeometry')object.geometry=new THREE.IcosahedronGeometry(object.geometry.parameters.radius,0);
   });
-  floor.material=floor.material.clone();floor.material.color.set(0xc9aa80);
-  const boards=new THREE.Group();boards.name='Lightweight floor detail';model.add(boards);
-  for(let x=-16.25;x<16.5;x+=.65){const strip=box(boards,'Floorboard seam',x,.005,0,.013,.008,27.6,0xb28f66);strip.castShadow=false;}
-  for(let x=-15;x<16;x+=2.6)for(let z=-12;z<14;z+=3.4){const strip=box(boards,'Floorboard joint',x,.008,z+(Math.round(x)%2)*1.7,2.59,.006,.012,0xb28f66);strip.castShadow=false;}
+  floor.visible=false;floor.userData.svgGround=true;
+  const boards=new THREE.Group();boards.name='Painted floor tiles';model.add(boards);
+  const tileGeometry=new THREE.PlaneGeometry(1.19,1.69),tileMaterials=[0xbba38f,0xc4ad96,0xbca28c,0xc9b09a].map(color=>mat(color));
+  for(let ix=0;ix<28;ix++)for(let iz=0;iz<16;iz++){const tile=new THREE.Mesh(tileGeometry,tileMaterials[(ix*7+iz*3)%4]);tile.rotation.x=-Math.PI/2;tile.position.set(-16.2+ix*1.2,-.013,-12.75+iz*1.7);boards.add(tile);}
+
 }
 function updateFallbackLabels(){
   const rect=canvas.getBoundingClientRect(),probe=new THREE.Raycaster();
@@ -235,10 +242,10 @@ function updateFallbackLabels(){
     node.style.fontSize=`${Math.max(7,Math.min(height*px*.52,width*px/(node.textContent.length*.99)))}px`;
   }
 }
-if(renderer&&!svgFallback){renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;}
+if(renderer&&!svgFallback){renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.02;}
 if(renderer){
   const resize=()=>{const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();dirty=true;};new ResizeObserver(resize).observe(canvas);
-  reset();resize();status.textContent=(svgFallback?'軽量3D表示です。':'準備ができました。')+'正面に5教室、振り返ると4教室。GLBモデルも保存できます。';
+  reset();resize();status.textContent=(svgFallback?'アニメ映画風の軽量表示です。':'アニメ映画風の校舎です。')+'正面に5教室、振り返ると4教室。GLBモデルも保存できます。';
   const tick=time=>{move(Math.min((time-lastTime)/1000,.05)||0);lastTime=time;if(dirty&&!document.hidden){updateCamera();renderer.render(scene,camera);if(svgFallback)updateFallbackLabels();dirty=false;}requestAnimationFrame(tick);};requestAnimationFrame(tick);
   canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();$('error').hidden=false;$('error').textContent='3D描画が中断されました。ページを再読み込みしてください。';});
   // Read-only diagnostic surface used by the local visual smoke test.

@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f4efe5"><title>Astra 校舎モデル｜デジタルエンジニア学校</title>
-<link rel="stylesheet" href="astra-3d.css?v=astra-5">
+<link rel="stylesheet" href="astra-3d.css?v=film-1">
 </head>
 <body>
 <header class="topbar"><a class="brand" href="./"><span class="brand-icon">学</span><span>デジタルエンジニア学校<small>ASTRA / 3D CAMPUS STUDY</small></span></a><nav aria-label="表示切り替え"><button id="reset" class="active">廊下へ</button><button id="turn">振り返る ↻</button><button id="overview">校舎を俯瞰</button><button id="download">3Dモデルを保存 ↓</button></nav></header>
 <main id="viewport">
 <canvas id="campus" tabindex="0" aria-label="3D校舎。ドラッグで見回し、WASD・矢印キーで移動。教室一覧から各部屋を選べます。"></canvas>
-<div class="scene-title"><span class="eyebrow">あたらしい学びの風景</span><h1>放課後の、つづき。</h1><p>陽だまりの廊下から、9つの教室へ。</p></div>
+<div class="scene-title"><span class="eyebrow">あたらしい学びの風景</span><h1>放課後の、つづき。</h1><p>夕日がほどける廊下から、9つの教室へ。</p></div>
 <div class="location"><i></i><span id="location">共同開発棟 · 中央廊下</span></div>
 <div id="error" role="alert" hidden></div>
 <div class="instructions" id="instructions">ドラッグで見回す <span>／</span> WASD・矢印で歩く <span>／</span> 部屋札をクリック</div>
@@ -17,8 +17,8 @@
 <div class="movement" aria-label="移動ボタン"><button data-move="forward" aria-label="前進">↑</button><div><button data-move="left" aria-label="左へ移動">←</button><button data-move="back" aria-label="後退">↓</button><button data-move="right" aria-label="右へ移動">→</button></div></div>
 <div class="rotation"><button data-move="turnLeft" aria-label="左を向く">↶</button><button data-move="turnRight" aria-label="右を向く">↷</button></div>
 <aside id="room-card" class="room-card" hidden><button id="close-card" aria-label="教室案内を閉じる">×</button><span class="eyebrow" id="room-number"></span><h2 id="room-name"></h2><p id="room-description"></p><button id="visit">教室の中を見る →</button><a id="open-room" href="./">学校でこの部屋を開く ↗</a></aside>
-<div class="model-note">Astra · WebGL 3D / 検討用モデル</div>
+<div class="model-note">放課後の校舎 · アニメ映画風</div>
 </main>
 <footer class="room-dock"><div class="dock-heading"><strong>教室を選ぶ</strong><span>正面 5室 / 反対側 4室</span></div><div class="room-list" id="room-list"></div><p id="status" role="status" aria-live="polite">校舎モデルを読み込んでいます…</p></footer>
-<script type="module" src="./astra-3d.js?v=astra-5"></script>
+<script type="module" src="./astra-3d.js?v=film-1"></script>
 </body></html>
