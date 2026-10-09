@@ -1,4 +1,4 @@
-import * as THREE from './vendor/astra-three.js?v=astra-3';
+import * as THREE from './vendor/astra-three.js?v=astra-4';
 
 // All school geometry is built in metres and can be exported as a portable GLB.
 const rooms = [
@@ -85,20 +85,50 @@ for(const room of rooms){
   box(g,'Window sill',x,1.04,s*13.45,w,.12,.36,0xe8dfc5);
   for(const edge of [leftEdge,rightEdge])box(walls,'Classroom partition',edge,1.75,s*10.1,.16,3.5,7,0xece4d4);
   box(ceiling,'Classroom ceiling',x,3.55,s*10.1,w,.16,7,0xf5eee0);
-  const boardX=x+w*.39;
-  box(g,'Blackboard frame',boardX,1.83,s*10.15,.1,1.5,3.4,0x9e8058);
-  box(g,'Blackboard',boardX-.065,1.84,s*10.15,.025,1.3,3.2,0x385f50);
-  box(g,'Chalk tray',boardX-.15,1.15,s*10.15,.3,.055,3.4,0xb09972);
-  for(let j=0;j<4;j++)box(g,'Chalk notes',boardX-.085,2.2-j*.18,s*10.15,.012,.025,1.9-j*.24,0xbecdb4);
-  for(const zz of [8.15,10,11.85])for(const dx of [-w*.22,w*.07])desk(g,x+dx,s*zz,room);
-  if(room.id==='library')for(let k=0;k<2;k++)bookshelf(g,x-w*.42,s*(8.5+k*2));
-  if(room.id==='communication'){
-    box(g,'Sofa base',x-w*.36,.35,s*11.8,1.3,.5,1.9,0xa6ad80);box(g,'Sofa back',x-w*.46,.83,s*11.8,.24,.8,1.9,0x9ca775);
-  }
+  buildRoomInterior(g,room);
   // Warm pools of daylight are actual coplanar meshes, portable in the GLB.
   for(let j=0;j<3;j++){
     const sunpatch=box(g,'Window light',x+(j-1)*w*.25,.006,s*10.55,w*.18,.012,4.2,0xffe8a7,{transparent:true,opacity:.24,depthWrite:false});sunpatch.rotation.y=-.28*s;sunpatch.castShadow=false;
   }
+}
+function buildRoomInterior(g,r){
+  const {x,side:s,width:w}=r;
+  const B=(name,dx,y,z,bw,bh,bd,color)=>box(g,name,x+dx,y,s*z,bw,bh,bd,color);
+  const L=(text,dx,y,z,width=2.8,height=.38,bg='#355b49',fg='#fff9dd')=>label(g,text,x+dx,y,s*z,width,height,s>0?Math.PI:0,bg,fg);
+  const chair=(dx,z,color=r.color)=>{B('Chair seat',dx,.46,z,.52,.08,.52,color);B('Chair back',dx,.84,z+.25,.52,.68,.06,color);for(const a of [-.2,.2])for(const b of [-.2,.2])B('Chair leg',dx+a,.23,z+b,.035,.44,.035,0x6d796e);};
+  const table=(dx,z,bw=2,bd=1.1)=>{B('Work table',dx,.79,z,bw,.1,bd,0xd6b888);for(const a of [-bw/2+.12,bw/2-.12])for(const b of [-bd/2+.12,bd/2-.12])B('Table leg',dx+a,.38,z+b,.07,.72,.07,0x718478);};
+  const screen=(dx,z,text,color=0x78afa6)=>{B('Monitor',dx,1.23,z,1.08,.66,.08,0x53665e);B('Monitor stand',dx,.94,z,.06,.25,.08,0x53665e);B('Monitor base',dx,.84,z,.3,.04,.22,0x53665e);B('Monitor image',dx,1.23,z-.055,.95,.54,.015,color);L(text,dx,1.23,z-.067,.88,.33,'#294f48');B('Keyboard',dx,.855,z-.34,.65,.035,.2,0x8d9991);};
+  const board=(title,items)=>{B('Purpose board',w*.26,1.94,12.99,w*.43,1.45,.08,r.color);L(title,w*.26,2.42,12.93,w*.38,.3);items.forEach((t,i)=>L(t,w*.26,2.08-i*.28,12.93,w*.36,.23,'#f3edda','#355b49'));};
+  L(r.name,0,3.06,12.96,Math.min(w-1,4.6),.4);
+  B('Room accent rug',.25,.004,10.45,w*.69,.012,4.5,r.color);
+  if(r.id==='dev'){
+    for(const dx of [-.25,w*.27])for(const z of [9,11.2]){table(dx,z,1.7,.95);chair(dx,z-1);screen(dx,z+.14,'CODE  { }');}
+    B('Server cabinet',-w*.4,1,11.6,.55,2,1,0x59685e);for(let i=0;i<7;i++){B('Server rack',-w*.4,.35+i*.2,11.08,.45,.13,.035,0x39493f);B('Server light',-w*.48,.35+i*.2,11.05,.035,.035,.025,0x9ce29b);}board('共同開発',['設計 → 実装 → テスト','コードレビュー']);
+  }else if(r.id==='design'){
+    table(.35,10.1,3.1,1.8);chair(-.7,8.8);chair(1.3,8.8);B('Drawing tablet',-.4,.88,10,.8,.055,.6,0x63766d);B('Sketch paper',.65,.86,10,.85,.035,.62,0xfff7e4);
+    for(let i=0;i<6;i++)B('Colour sample',-.8+i*.42,.88,10.6,.3,.04,.23,[0xc78376,0xe7bd68,0x8caa8b,0x79a4ba,0xa59bc1,0xddaa8d][i]);board('デザインボード',['配色・レイアウト','画面の試作']);
+    for(let i=0;i<3;i++)B('Design poster',-w*.32,1.6,8.8+i*1.3,.08,1.1,.95,[0xdda990,0x9ebcc0,0xc6b18f][i]);
+  }else if(r.id==='scrum'){
+    table(.3,10.4,2.3,1.25);chair(-.3,9.35);chair(.9,9.35);
+    for(let i=0;i<3;i++){const dx=(i-1)*1.7;B('Kanban column',dx,1.88,12.95,1.5,1.65,.08,0xece3c6);L(['未着手','進行中','完了'][i],dx,2.5,12.89,1.38,.3);for(let j=0;j<3;j++)B('Task sticky',dx+(j%2-.5)*.55,2.15-Math.floor(j/2)*.44,12.86,.43,.32,.025,[0xe3bf72,0x9fbdb0,0xd7a694][i]);}
+    L('朝会・進捗共有',0,2.85,12.9,3,.24);
+  }else if(r.id==='library'){
+    for(const zz of [8.4,10.3,12.2])bookshelf(g,x-w*.42,s*zz);
+    table(.25,10.25,2.15,1.1);chair(.25,9.25);B('Open book',.25,.87,10.25,.7,.06,.5,0xfff4d8);board('資料を探す',['参考書・仕様書','共有資料・学習記録']);
+  }else if(r.id==='meeting'){
+    table(.35,10.1,2,3.2);for(const zz of [9.1,10.2,11.3]){chair(-1.25,zz);chair(1.95,zz);}B('Conference speaker',.35,.9,10.1,.3,.12,.3,0x65756a);board('会議・相談',['議題 → 意見 → 決定','次のアクション']);
+  }else if(r.id==='communication'){
+    for(const dx of [-1.5,1.5]){B('Lounge sofa seat',dx,.48,10.8,1.4,.35,2.5,0xbcaa81);B('Lounge sofa back',dx+(dx<0?-.6:.6),.96,10.8,.2,.9,2.5,0x9eae86);for(const zz of [10.05,11.55])B('Cushion',dx,.73,zz,.8,.17,.65,0xcdb78e);}table(0,10.8,1.35,1.6);for(const dx of [-.32,.32])B('Coffee cup',dx,.91,10.8,.13,.2,.13,0xf0e7cf);board('テーマで話す',['雑談・相談','アイデア交換']);
+  }else if(r.id==='study'){
+    for(const dx of [-.5,1.6])for(const zz of [9,11.4]){table(dx,zz,1.6,1);chair(dx,zz-1);B('Study notebook',dx,.87,zz,.6,.03,.45,0xf8eed7);B('Desk partition',dx,.99,zz+.48,1.6,.46,.05,0xadc1a5);}board('集中して学ぶ',['ITパスポート','TOEIC・分野別演習']);
+  }else if(r.id==='presentation'){
+    B('Presentation stage',.1,.17,12,5.7,.32,1.55,0xb79975);B('Projection screen frame',.1,2.15,13.05,4.9,1.55,.12,0x6d8279);B('Projection screen',.1,2.15,12.97,4.65,1.32,.025,0xf6f0de);L('プレゼンテーション',.1,2.34,12.94,4.3,.35);L('成果を伝える・発表する',.1,1.94,12.94,3.8,.24,'#ece2c9','#355b49');B('Lectern',-2.05,.88,11.7,.68,1.25,.5,0x947b58);for(const zz of [8.6,9.9])for(const dx of [-1.5,0,1.5])chair(dx,zz);
+  }else if(r.id==='editing'){
+    table(.35,10.1,4.1,1.6);for(const dx of [-1.1,.35,1.8])chair(dx,8.7);
+    ['Word','Excel','PowerPoint'].forEach((t,i)=>screen(-1.1+i*1.45,10.55,t,[0x8aaac3,0x93b8a0,0xcea48f][i]));
+    board('共同編集',['文章・表・スライド','読み込む → 編集 → 保存']);
+  }
+  r.layout={dev:'PC作業席とサーバーラック',design:'大きな制作机と配色サンプル',scrum:'未着手・進行中・完了のタスクボード',library:'本棚と閲覧席',meeting:'会議テーブルと議題ボード',communication:'向かい合うソファとカフェテーブル',study:'仕切り付きの個別学習席',presentation:'壇上・スクリーン・観客席',editing:'Word・Excel・PowerPointの共同編集席'}[r.id];
 }
 function desk(parent,x,z,room){
   box(parent,'Desk top',x,.78,z,1.05,.085,.66,0xd4b483);
@@ -152,9 +182,9 @@ const moving=new Set(),raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2
 const keys={w:'forward',ArrowUp:'forward',s:'back',ArrowDown:'back',a:'left',ArrowLeft:'left',d:'right',ArrowRight:'right',q:'turnLeft',e:'turnRight'};
 function reset(){mode='hall';ceiling.visible=true;camera.position.set(0,1.65,5.2);yaw=0;pitch=.005;moving.clear();$('location').textContent='共同開発棟 · 中央廊下';$('reset').classList.add('active');$('overview').classList.remove('active');$('instructions').innerHTML='ドラッグで見回す <span>／</span> WASD・矢印で歩く <span>／</span> 部屋札をクリック';closeCard();dirty=true;}
 function overview(){mode='overview';ceiling.visible=false;moving.clear();$('location').textContent='校舎全体 · 屋根を外した俯瞰';$('overview').classList.add('active');$('reset').classList.remove('active');$('instructions').textContent='ドラッグ・左右の回転ボタンで回す ／ ホイール・前後ボタンで拡大縮小 ／ 教室を選ぶ';closeCard();dirty=true;}
-function selectRoom(room){selected=room;$('room-card').hidden=false;$('room-number').textContent=`ROOM ${String(room.index+1).padStart(2,'0')} / ${room.side<0?'正面の教室':'反対側の教室'}`;$('room-name').textContent=room.name;$('room-description').textContent=room.text;$('open-room').href=`./#r=${room.id}`;document.querySelectorAll('[data-room]').forEach(b=>b.classList.toggle('selected',b.dataset.room===room.id));status.textContent=`${room.name}を選択しました。「教室の中を見る」で室内へ移動できます。`;dirty=true;}
+function selectRoom(room){selected=room;$('room-card').hidden=false;$('room-number').textContent=`ROOM ${String(room.index+1).padStart(2,'0')} / ${room.side<0?'正面の教室':'反対側の教室'}`;$('room-name').textContent=room.name;$('room-description').textContent=room.text+' 内装：'+room.layout+'。';$('open-room').href=`./#r=${room.id}`;document.querySelectorAll('[data-room]').forEach(b=>b.classList.toggle('selected',b.dataset.room===room.id));status.textContent=`${room.name}を選択しました。「教室の中を見る」で室内へ移動できます。`;dirty=true;}
 function closeCard(){$('room-card').hidden=true;document.querySelectorAll('[data-room]').forEach(b=>b.classList.remove('selected'));selected=null;}
-function visit(){if(!selected)return;const room=selected;mode='room';ceiling.visible=true;camera.position.set(room.x-room.width*.27,1.65,room.side*7.8);yaw=room.side>0?Math.PI:0;pitch=-.04;moving.clear();$('location').textContent=`ROOM ${String(room.index+1).padStart(2,'0')} · ${room.name}`;status.textContent=`${room.name}の室内です。「廊下へ」で中央廊下に戻れます。`;$('reset').classList.remove('active');$('overview').classList.remove('active');$('room-card').hidden=true;dirty=true;}
+function visit(){if(!selected)return;const room=selected;mode='room';ceiling.visible=true;camera.position.set(room.x-room.width*.27,1.65,room.side*7.8);yaw=(room.side>0?Math.PI:0)-.15;pitch=-.08;moving.clear();$('location').textContent=`ROOM ${String(room.index+1).padStart(2,'0')} · ${room.name}`;status.textContent=`${room.name}の室内です。「廊下へ」で中央廊下に戻れます。`;$('reset').classList.remove('active');$('overview').classList.remove('active');$('room-card').hidden=true;dirty=true;}
 $('room-list').innerHTML=rooms.map(r=>`<button data-room="${r.id}"><small>${String(r.index+1).padStart(2,'0')} · ${r.side<0?'FRONT':'BACK'}</small>${r.name}</button>`).join('');
 document.querySelectorAll('[data-room]').forEach(b=>b.addEventListener('click',()=>{const room=rooms.find(r=>r.id===b.dataset.room);if(!renderer){location.href=`./#r=${room.id}`;return;}selectRoom(room);}));
 $('reset').onclick=reset;$('overview').onclick=overview;$('turn').onclick=()=>{if(mode==='overview')overviewAngle+=Math.PI;else{yaw+=Math.PI;pitch=0;}moving.clear();dirty=true;};$('close-card').onclick=closeCard;$('visit').onclick=visit;
