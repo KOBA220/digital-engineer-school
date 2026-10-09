@@ -1,5 +1,5 @@
-import {PaintedRenderer} from './painted-renderer.js?v=anime-2';
-import * as THREE from './vendor/astra-three.js?v=anime-2';
+import {PaintedRenderer} from './painted-renderer.js?v=anime-3';
+import * as THREE from './vendor/astra-three.js?v=anime-3';
 
 // All school geometry is built in metres and can be exported as a portable GLB.
 const rooms = [
@@ -33,8 +33,8 @@ const wash=paintedTexture();
 const materials=new Map();
 function mat(color,options={}){const key=JSON.stringify([color,options]);if(!materials.has(key)){const c=new THREE.Color(color);materials.set(key,new THREE.MeshStandardMaterial({color:c,map:options.transparent?null:wash,roughness:.98,...options}));}return materials.get(key);}
 const unitBox=new THREE.BoxGeometry(1,1,1),inkEdges=new THREE.EdgesGeometry(unitBox),ink=new THREE.LineBasicMaterial({color:0x78676a,transparent:true,opacity:.2});
-function box(parent,name,x,y,z,w,h,d,color,options={}){const geometry=(w>5||d>5)&&h>.2?new THREE.BoxGeometry(1,1,1,Math.max(1,Math.ceil(w/1.8)),Math.max(1,Math.ceil(h/.8)),Math.max(1,Math.ceil(d/1.8))):unitBox;const mesh=new THREE.Mesh(geometry,mat(color,options));mesh.name=name;mesh.position.set(x,y,z);mesh.scale.set(w,h,d);mesh.castShadow=true;mesh.receiveShadow=true;if(false){const lines=new THREE.LineSegments(inkEdges,ink);lines.name='Illustrated edges';mesh.add(lines);}parent.add(mesh);return mesh;}
-function sphere(parent,x,y,z,r,color,sx=1,sy=1,sz=1){const m=new THREE.Mesh(new THREE.SphereGeometry(r,12,8),mat(color));m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;parent.add(m);return m;}
+function box(parent,name,x,y,z,w,h,d,color,options={}){const geometry=(w>5||d>5)?new THREE.BoxGeometry(1,1,1,Math.max(1,Math.ceil(w/1.8)),Math.max(1,Math.ceil(h/.8)),Math.max(1,Math.ceil(d/1.8))):unitBox;const mesh=new THREE.Mesh(geometry,mat(color,options));mesh.name=name;mesh.position.set(x,y,z);mesh.scale.set(w,h,d);mesh.castShadow=true;mesh.receiveShadow=true;if(false){const lines=new THREE.LineSegments(inkEdges,ink);lines.name='Illustrated edges';mesh.add(lines);}parent.add(mesh);return mesh;}
+function sphere(parent,x,y,z,r,color,sx=1,sy=1,sz=1){const m=new THREE.Mesh(new THREE.SphereGeometry(r,12,8),mat(color));m.name=y>15?'Painted cloud':'Tree foliage';m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;parent.add(m);return m;}
 const roundedCache=new Map();
 function roundedPanel(parent,name,x,y,z,w,h,depth,color,rotation=0){
   const key=[w,h,depth].join(',');let geometry=roundedCache.get(key);
@@ -282,8 +282,9 @@ artImage.onload=()=>{
     if(!mesh.isMesh||mesh.userData.label)return;const name=mesh.name.toLowerCase();let texture;
     if(/wall|plaster|ceiling|partition|cornice/.test(name)&&!/board|window|outlet/.test(name))texture=plaster;
     else if(/table|desk top|plywood|door|bench|wood|floor|book shelf/.test(name))texture=wood;
-    else if(mesh.geometry.type==='SphereGeometry')texture=leaves;
-    if(texture){mesh.material=mesh.material.clone();mesh.material.map=texture;mesh.material.color.set(/sphere/.test(mesh.geometry.type.toLowerCase())?0xffffff:/floor|plywood|table|wood|door|bench/.test(name)?0xffeed5:0xfff5e6);mesh.material.needsUpdate=true;}
+    else if(mesh.name==='Tree foliage')texture=leaves;
+    if(mesh.name==='Painted cloud'){mesh.visible=false;mesh.userData.svgGround=true;}
+    if(texture){mesh.material=mesh.material.clone();mesh.material.map=texture;if(mesh.name==='Painted floor plank'){const plank=wood.clone();plank.repeat.set(.125,.5);plank.offset.set(((Math.round(mesh.position.x/1.2)%8)+8)%8/8,((Math.round(mesh.position.z/1.7)%2)+2)%2*.5);plank.needsUpdate=true;mesh.material.map=plank;}mesh.material.color.set(/sphere/.test(mesh.geometry.type.toLowerCase())?0xffffff:/floor|plywood|table|wood|door|bench/.test(name)?0xffeed5:0xfff5e6);mesh.material.needsUpdate=true;}
   });
   floor.material.map=wood;floor.material.color.set(0xffeace);floor.material.needsUpdate=true;
   materialArtReady=true;dirty=true;status.textContent='手描きの背景美術風テクスチャを反映しました。ドラッグで見回せます。';

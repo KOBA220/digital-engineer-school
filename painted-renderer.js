@@ -1,4 +1,4 @@
-import * as THREE from './vendor/astra-three.js?v=anime-2';
+import * as THREE from './vendor/astra-three.js?v=anime-3';
 
 // Texture-capable fallback: renders the actual mesh scene, including imported art.
 // This keeps movement and room geometry usable without a GPU.
@@ -37,7 +37,7 @@ export class PaintedRenderer {
     });
     triangles.sort((a,b)=>a.z-b.z);
     for(const t of triangles){
-      const {a,b,c,material:m,light}=t;ctx.save();ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.lineTo(c.x,c.y);ctx.closePath();ctx.clip();ctx.globalAlpha=m.transparent?m.opacity:1;
+      const {a,b,c,material:m,light}=t;ctx.save();ctx.beginPath();const cx=(a.x+b.x+c.x)/3,cy=(a.y+b.y+c.y)/3;for(const [i,p] of [a,b,c].entries()){const dx=p.x-cx,dy=p.y-cy,length=Math.max(1,Math.hypot(dx,dy)),xx=p.x+dx/length*.4,yy=p.y+dy/length*.4;if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}ctx.closePath();ctx.clip();ctx.globalAlpha=m.transparent?m.opacity:1;
       const color=m.color??new THREE.Color(1,1,1);ctx.fillStyle=color.getStyle();ctx.fillRect(0,0,w,h);
       const map=m.map,image=map?.image;
       if(image?.width&&image?.height){
