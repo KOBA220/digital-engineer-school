@@ -9,3 +9,6 @@
 .scene-title{color:#4d525c}.scene-title h1{letter-spacing:.18em}.projected-label{box-shadow:0 1px 3px #5d486517;border-color:#ead9c880}.topbar,.room-dock{background:#f3ede4}.model-note{color:#686479}
 
 .scene-title{opacity:.82}.scene-title h1{font-size:27px}.scene-title p{font-size:10px}#viewport::after{mix-blend-mode:soft-light;opacity:.5}
+
+.embedded-campus .topbar{height:64px;padding:10px 18px}.embedded-campus .brand{font-size:12px}.embedded-campus .brand-icon{display:none}.embedded-campus #viewport{height:calc(100dvh - 194px);min-height:400px}.embedded-campus .scene-title{display:none}
+@media(max-width:900px){.embedded-campus .topbar{height:100px;gap:8px}.embedded-campus #viewport{height:calc(100dvh - 232px);min-height:400px}}

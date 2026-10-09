@@ -299,3 +299,14 @@ if(renderer){
   // Read-only diagnostic surface used by the local visual smoke test.
   window.astraCampus={get mode(){return mode;},get roomCount(){return rooms.length;},get renderer(){return renderer;},get camera(){return camera;},get scene(){return scene;}};
 }
+
+// Embedded campus opens the existing school route in its parent application.
+if(new URLSearchParams(location.search).get('embedded')==='1' && window.parent!==window){
+ document.body.classList.add('embedded-campus');
+ document.querySelector('.brand small').textContent='3D CAMPUS / 校内案内';
+ $('open-room').textContent='この部屋で作業をはじめる →';
+ $('open-room').addEventListener('click',event=>{
+  event.preventDefault();
+  if(selected)window.parent.postMessage({type:'school:enter-room',room:selected.id},location.origin);
+ });
+}
