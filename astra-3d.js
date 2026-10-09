@@ -1,4 +1,4 @@
-import * as THREE from './vendor/astra-three.js';
+import * as THREE from './vendor/astra-three.js?v=astra-2';
 
 // All school geometry is built in metres and can be exported as a portable GLB.
 const rooms = [
