@@ -1,5 +1,5 @@
-import {PaintedRenderer} from './painted-renderer.js?v=anime-3';
-import * as THREE from './vendor/astra-three.js?v=anime-3';
+import {PaintedRenderer} from './painted-renderer.js?v=anime-4';
+import * as THREE from './vendor/astra-three.js?v=anime-4';
 
 // All school geometry is built in metres and can be exported as a portable GLB.
 const rooms = [

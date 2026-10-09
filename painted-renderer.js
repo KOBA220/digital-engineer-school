@@ -1,10 +1,10 @@
-import * as THREE from './vendor/astra-three.js?v=anime-3';
+import * as THREE from './vendor/astra-three.js?v=anime-4';
 
 // Texture-capable fallback: renders the actual mesh scene, including imported art.
 // This keeps movement and room geometry usable without a GPU.
 export class PaintedRenderer {
-  constructor(){this.domElement=document.createElement('canvas');this.ctx=this.domElement.getContext('2d');this.width=1;this.height=1;this.patterns=new WeakMap();}
-  setSize(w,h){this.width=w;this.height=h;this.domElement.width=w;this.domElement.height=h;}
+  constructor(){this.domElement=document.createElement('canvas');this.ctx=this.domElement.getContext('2d');this.width=1;this.height=1;this.patterns=new WeakMap();this.texturePixels=new WeakMap();}
+  setSize(w,h){this.width=Math.max(1,Math.round(w*.75));this.height=Math.max(1,Math.round(h*.75));this.domElement.width=this.width;this.domElement.height=this.height;}
   setQuality(){}
   setPrecision(){}
   render(scene,camera){
@@ -36,23 +36,28 @@ export class PaintedRenderer {
       }
     });
     triangles.sort((a,b)=>a.z-b.z);
+    const frame=ctx.getImageData(0,0,w,h),pixels=frame.data,depth=new Float32Array(w*h);
     for(const t of triangles){
-      const {a,b,c,material:m,light}=t;ctx.save();ctx.beginPath();const cx=(a.x+b.x+c.x)/3,cy=(a.y+b.y+c.y)/3;for(const [i,p] of [a,b,c].entries()){const dx=p.x-cx,dy=p.y-cy,length=Math.max(1,Math.hypot(dx,dy)),xx=p.x+dx/length*.4,yy=p.y+dy/length*.4;if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}ctx.closePath();ctx.clip();ctx.globalAlpha=m.transparent?m.opacity:1;
-      const color=m.color??new THREE.Color(1,1,1);ctx.fillStyle=color.getStyle();ctx.fillRect(0,0,w,h);
-      const map=m.map,image=map?.image;
-      if(image?.width&&image?.height){
-        let pattern=this.patterns.get(image);if(!pattern){pattern=ctx.createPattern(image,'repeat');if(pattern)this.patterns.set(image,pattern);}
-        const coords=[a,b,c].map(p=>({u:(p.u*(map.repeat?.x??1)+(map.offset?.x??0))*image.width,v:(1-p.v*(map.repeat?.y??1)-(map.offset?.y??0))*image.height}));
-        const [p,q,r]=coords,du1=q.u-p.u,dv1=q.v-p.v,du2=r.u-p.u,dv2=r.v-p.v,det=du1*dv2-du2*dv1;
-        if(pattern&&Math.abs(det)>.001){
-          const ax=((b.x-a.x)*dv2-(c.x-a.x)*dv1)/det,bx=((c.x-a.x)*du1-(b.x-a.x)*du2)/det;
-          const ay=((b.y-a.y)*dv2-(c.y-a.y)*dv1)/det,by=((c.y-a.y)*du1-(b.y-a.y)*du2)/det;
-          ctx.save();ctx.transform(ax,ay,bx,by,a.x-ax*p.u-bx*p.v,a.y-ay*p.u-by*p.v);ctx.fillStyle=pattern;ctx.fillRect(Math.min(p.u,q.u,r.u)-1,Math.min(p.v,q.v,r.v)-1,Math.max(p.u,q.u,r.u)-Math.min(p.u,q.u,r.u)+2,Math.max(p.v,q.v,r.v)-Math.min(p.v,q.v,r.v)+2);ctx.restore();
-          if(!m.isMeshBasicMaterial){ctx.globalCompositeOperation='multiply';ctx.fillStyle=color.getStyle();ctx.fillRect(0,0,w,h);ctx.globalCompositeOperation='source-over';}
+      const {a,b,c,material:m,light}=t,den=(b.y-c.y)*(a.x-c.x)+(c.x-b.x)*(a.y-c.y);
+      if(Math.abs(den)<.01)continue;
+      const minX=Math.max(0,Math.floor(Math.min(a.x,b.x,c.x))),maxX=Math.min(w-1,Math.ceil(Math.max(a.x,b.x,c.x))),minY=Math.max(0,Math.floor(Math.min(a.y,b.y,c.y))),maxY=Math.min(h-1,Math.ceil(Math.max(a.y,b.y,c.y)));
+      const za=-1/a.z,zb=-1/b.z,zc=-1/c.z,col=(m.color??new THREE.Color(1,1,1)).clone().convertLinearToSRGB(),base=[col.r,col.g,col.b],map=m.map,image=map?.image;
+      let texture;if(image?.width&&image?.height){texture=this.texturePixels.get(image);if(!texture){const scratch=document.createElement('canvas');scratch.width=image.width;scratch.height=image.height;const tc=scratch.getContext('2d');tc.drawImage(image,0,0);texture={width:image.width,height:image.height,data:tc.getImageData(0,0,image.width,image.height).data};this.texturePixels.set(image,texture);}}
+      const opacity=m.transparent?m.opacity:1,shade=(1-light)*.55;
+      for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
+        const px=x+.5,py=y+.5,wa=((b.y-c.y)*(px-c.x)+(c.x-b.x)*(py-c.y))/den,wb=((c.y-a.y)*(px-c.x)+(a.x-c.x)*(py-c.y))/den,wc=1-wa-wb;
+        if(wa<-.0001||wb<-.0001||wc<-.0001)continue;
+        const inv=wa*za+wb*zb+wc*zc,di=y*w+x;if(inv<=depth[di])continue;
+        let alpha=opacity,red=base[0]*255,green=base[1]*255,blue=base[2]*255;
+        if(texture){
+          const u=(wa*a.u*za+wb*b.u*zb+wc*c.u*zc)/inv*(map.repeat?.x??1)+(map.offset?.x??0),v=(wa*a.v*za+wb*b.v*zb+wc*c.v*zc)/inv*(map.repeat?.y??1)+(map.offset?.y??0);
+          const uu=((u%1)+1)%1,vv=map.flipY?1-(((v%1)+1)%1):(((v%1)+1)%1),ti=(Math.min(texture.height-1,Math.floor(vv*texture.height))*texture.width+Math.min(texture.width-1,Math.floor(uu*texture.width)))*4;
+          red=texture.data[ti]*base[0];green=texture.data[ti+1]*base[1];blue=texture.data[ti+2]*base[2];alpha*=texture.data[ti+3]/255;
         }
+        red=red*(1-shade)+111*shade;green=green*(1-shade)+112*shade;blue=blue*(1-shade)+151*shade;
+        const pi=di*4;pixels[pi]=red*alpha+pixels[pi]*(1-alpha);pixels[pi+1]=green*alpha+pixels[pi+1]*(1-alpha);pixels[pi+2]=blue*alpha+pixels[pi+2]*(1-alpha);pixels[pi+3]=255;if(alpha>.98)depth[di]=inv;
       }
-      if(light<.99){ctx.globalAlpha=(1-light)*.55;ctx.fillStyle='#6f7097';ctx.fillRect(0,0,w,h);}
-      ctx.restore();
     }
+    ctx.putImageData(frame,0,0);
   }
 }
