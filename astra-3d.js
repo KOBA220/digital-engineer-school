@@ -1,4 +1,4 @@
-import * as THREE from './vendor/astra-three.js?v=astra-4';
+import * as THREE from './vendor/astra-three.js?v=astra-5';
 
 // All school geometry is built in metres and can be exported as a portable GLB.
 const rooms = [
@@ -184,7 +184,7 @@ function reset(){mode='hall';ceiling.visible=true;camera.position.set(0,1.65,5.2
 function overview(){mode='overview';ceiling.visible=false;moving.clear();$('location').textContent='校舎全体 · 屋根を外した俯瞰';$('overview').classList.add('active');$('reset').classList.remove('active');$('instructions').textContent='ドラッグ・左右の回転ボタンで回す ／ ホイール・前後ボタンで拡大縮小 ／ 教室を選ぶ';closeCard();dirty=true;}
 function selectRoom(room){selected=room;$('room-card').hidden=false;$('room-number').textContent=`ROOM ${String(room.index+1).padStart(2,'0')} / ${room.side<0?'正面の教室':'反対側の教室'}`;$('room-name').textContent=room.name;$('room-description').textContent=room.text+' 内装：'+room.layout+'。';$('open-room').href=`./#r=${room.id}`;document.querySelectorAll('[data-room]').forEach(b=>b.classList.toggle('selected',b.dataset.room===room.id));status.textContent=`${room.name}を選択しました。「教室の中を見る」で室内へ移動できます。`;dirty=true;}
 function closeCard(){$('room-card').hidden=true;document.querySelectorAll('[data-room]').forEach(b=>b.classList.remove('selected'));selected=null;}
-function visit(){if(!selected)return;const room=selected;mode='room';ceiling.visible=true;camera.position.set(room.x-room.width*.27,1.65,room.side*7.8);yaw=(room.side>0?Math.PI:0)-.15;pitch=-.08;moving.clear();$('location').textContent=`ROOM ${String(room.index+1).padStart(2,'0')} · ${room.name}`;status.textContent=`${room.name}の室内です。「廊下へ」で中央廊下に戻れます。`;$('reset').classList.remove('active');$('overview').classList.remove('active');$('room-card').hidden=true;dirty=true;}
+function visit(){if(!selected)return;const room=selected;mode='room';ceiling.visible=true;camera.position.set(room.x+.1,1.65,room.side*7.6);yaw=room.side>0?Math.PI:0;pitch=-.08;moving.clear();$('location').textContent=`ROOM ${String(room.index+1).padStart(2,'0')} · ${room.name}`;status.textContent=`${room.name}の室内です。「廊下へ」で中央廊下に戻れます。`;$('reset').classList.remove('active');$('overview').classList.remove('active');$('room-card').hidden=true;dirty=true;}
 $('room-list').innerHTML=rooms.map(r=>`<button data-room="${r.id}"><small>${String(r.index+1).padStart(2,'0')} · ${r.side<0?'FRONT':'BACK'}</small>${r.name}</button>`).join('');
 document.querySelectorAll('[data-room]').forEach(b=>b.addEventListener('click',()=>{const room=rooms.find(r=>r.id===b.dataset.room);if(!renderer){location.href=`./#r=${room.id}`;return;}selectRoom(room);}));
 $('reset').onclick=reset;$('overview').onclick=overview;$('turn').onclick=()=>{if(mode==='overview')overviewAngle+=Math.PI;else{yaw+=Math.PI;pitch=0;}moving.clear();dirty=true;};$('close-card').onclick=closeCard;$('visit').onclick=visit;
