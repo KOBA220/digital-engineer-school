@@ -17,9 +17,15 @@ const canvas=$('campus'),status=$('status');
 const scene=new THREE.Scene();scene.background=new THREE.Color(0xc8e3ed);scene.fog=new THREE.Fog(0xd4e8eb,48,115);
 const model=new THREE.Group();model.name='Astra_Digital_Engineer_School';scene.add(model);
 const camera=new THREE.PerspectiveCamera(72,1,.08,160);camera.rotation.order='YXZ';
-let renderer;
+let renderer,svgFallback=false;
 try{renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});}
-catch(error){$('error').hidden=false;$('error').textContent='この端末では WebGL 2 を起動できませんでした。ハードウェアアクセラレーションを有効にしたブラウザで再度お試しください。下の教室一覧から学校の各部屋を開けます。';status.textContent='3D表示を開始できませんでした。';}
+catch(error){
+  svgFallback=true;renderer=new THREE.SVGRenderer();renderer.setQuality('low');renderer.setPrecision(2);
+  renderer.domElement.classList.add('svg-scene');renderer.domElement.setAttribute('aria-hidden','true');
+  $('viewport').insertBefore(renderer.domElement,canvas);canvas.classList.add('svg-input');
+  document.querySelector('.model-note').textContent='Astra · 3D / 軽量表示';
+}
+
 const materials=new Map();
 function mat(color,options={}){const key=JSON.stringify([color,options]);if(!materials.has(key))materials.set(key,new THREE.MeshStandardMaterial({color,roughness:.86,...options}));return materials.get(key);}
 const unitBox=new THREE.BoxGeometry(1,1,1);
@@ -30,7 +36,7 @@ function label(parent,text,x,y,z,width,height,rotation=0,bg='#355b49',fg='#fff9d
   ctx.fillStyle=bg;ctx.fillRect(0,0,c.width,c.height);ctx.strokeStyle=fg+'88';ctx.lineWidth=3;ctx.strokeRect(12,12,c.width-24,c.height-24);
   const size=Math.min(c.height*.54,c.width/(text.length*.98));ctx.font=`500 ${size}px "Noto Sans JP", Meiryo, sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=fg;ctx.fillText(text,c.width/2,c.height*.52);
   const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
-  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(width,height),new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide}));mesh.position.set(x,y,z);mesh.rotation.y=rotation;parent.add(mesh);return mesh;
+  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(width,height),new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide}));mesh.position.set(x,y,z);mesh.rotation.y=rotation;mesh.userData.label={text,width,height,bg,fg};parent.add(mesh);return mesh;
 }
 function woodTexture(){const c=document.createElement('canvas');c.width=512;c.height=512;const ctx=c.getContext('2d');let seed=92;const rand=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);ctx.fillStyle='#c99d6a';ctx.fillRect(0,0,512,512);for(let row=0;row<8;row++){const y=row*64;ctx.fillStyle=['#c89f70','#d4ae7f','#c49b6c','#dabb8b'][row%4];ctx.fillRect(0,y,512,63);ctx.fillStyle='#a6805555';ctx.fillRect((row%2)*256,y,2,64);for(let i=0;i<18;i++){ctx.strokeStyle=rand()>.5?'#99734426':'#f1d8a52c';ctx.beginPath();const yy=y+rand()*62;ctx.moveTo(0,yy);ctx.bezierCurveTo(130,yy+rand()*5,360,yy-rand()*5,512,yy+rand()*3);ctx.stroke();}}const texture=new THREE.CanvasTexture(c);texture.wrapS=texture.wrapT=THREE.RepeatWrapping;texture.repeat.set(11,8);texture.colorSpace=THREE.SRGBColorSpace;return texture;}
 const floorMaterial=new THREE.MeshStandardMaterial({map:woodTexture(),roughness:.72,color:0xfff0d6});
@@ -163,11 +169,47 @@ document.querySelectorAll('[data-move]').forEach(button=>{button.addEventListene
 function move(dt){if(!moving.size)return;const f=Number(moving.has('forward'))-Number(moving.has('back')),side=Number(moving.has('right'))-Number(moving.has('left')),turn=Number(moving.has('turnLeft'))-Number(moving.has('turnRight'));if(mode==='overview'){overviewAngle+=(turn-side)*dt;overviewRadius=THREE.MathUtils.clamp(overviewRadius-f*dt*15,23,70);}else{yaw+=turn*dt*1.4;const speed=dt*3.8/Math.max(1,Math.hypot(f,side));camera.position.x+=(-Math.sin(yaw)*f+Math.cos(yaw)*side)*speed;camera.position.z+=(-Math.cos(yaw)*f-Math.sin(yaw)*side)*speed;const bounds=mode==='room'&&selected?{x1:selected.x-selected.width/2+.45,x2:selected.x+selected.width/2-.45,z1:selected.side<0?-13.1:7.1,z2:selected.side<0?-7.1:13.1}:{x1:-14.55,x2:14.55,z1:-5.9,z2:5.9};camera.position.x=THREE.MathUtils.clamp(camera.position.x,bounds.x1,bounds.x2);camera.position.z=THREE.MathUtils.clamp(camera.position.z,bounds.z1,bounds.z2);}dirty=true;}
 function updateCamera(){if(mode==='overview'){camera.position.set(Math.sin(overviewAngle)*overviewRadius,overviewRadius*.72,Math.cos(overviewAngle)*overviewRadius);camera.lookAt(0,0,0);}else camera.rotation.set(pitch,yaw,0,'YXZ');}
 $('download').onclick=async()=>{const button=$('download');button.disabled=true;button.textContent='書き出し中…';status.textContent='家具・日本語の部屋札を含む3Dモデルを書き出しています。';try{const exporter=new THREE.GLTFExporter();const portable=new THREE.Scene();portable.name='Astra School';const clone=model.clone(true);clone.getObjectByName('Ceilings_hidden_in_overview').visible=true;portable.add(clone);portable.add(new THREE.HemisphereLight(0xffffff,0xbda984,2));const light=new THREE.DirectionalLight(0xffedc3,2);light.position.set(25,28,18);portable.add(light);const data=await exporter.parseAsync(portable,{binary:true,maxTextureSize:1024});const url=URL.createObjectURL(new Blob([data],{type:'model/gltf-binary'}));const a=document.createElement('a');a.href=url;a.download='astra-digital-engineer-school.glb';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);status.textContent='GLBモデルを保存しました。Blenderなどで読み込み・編集できます。';}catch(error){status.textContent=`モデルの書き出しに失敗しました。${error.message}`;}finally{button.disabled=false;button.textContent='3Dモデルを保存 ↓';}};
-if(renderer){renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
+// The SVG renderer projects the same editable mesh model when WebGL is unavailable.
+// Its simplified lighting and projected labels avoid reliance on GPU textures.
+const fallbackLabels=[];
+if(svgFallback){
+  scene.add(new THREE.AmbientLight(0xfff5e5,.72));sun.intensity=.72;fill.intensity=.2;
+  scene.traverse(object=>{if(object.isPointLight)object.intensity=0;});
+  model.traverse(object=>{
+    if(object.isMesh&&typeof object.userData.label==='object'){
+      const {text,bg,fg}=object.userData.label;
+      const node=document.createElement('span');node.className='projected-label';node.textContent=text;node.style.background=bg;node.style.color=fg;
+      $('viewport').insertBefore(node,canvas);fallbackLabels.push({object,node});
+      object.material=object.material.clone();object.material.color.set(bg);
+    }
+    if(object.geometry?.type==='IcosahedronGeometry')object.geometry=new THREE.IcosahedronGeometry(object.geometry.parameters.radius,0);
+  });
+  floor.material=floor.material.clone();floor.material.color.set(0xc9aa80);
+  const boards=new THREE.Group();boards.name='Lightweight floor detail';model.add(boards);
+  for(let x=-16.25;x<16.5;x+=.65){const strip=box(boards,'Floorboard seam',x,.005,0,.013,.008,27.6,0xb28f66);strip.castShadow=false;}
+  for(let x=-15;x<16;x+=2.6)for(let z=-12;z<14;z+=3.4){const strip=box(boards,'Floorboard joint',x,.008,z+(Math.round(x)%2)*1.7,2.59,.006,.012,0xb28f66);strip.castShadow=false;}
+}
+function updateFallbackLabels(){
+  const rect=canvas.getBoundingClientRect(),probe=new THREE.Raycaster();
+  for(const {object,node} of fallbackLabels){
+    const world=object.getWorldPosition(new THREE.Vector3()),projected=world.clone().project(camera);
+    const direction=world.clone().sub(camera.position),distance=direction.length();
+    let visible=projected.z>-1&&projected.z<1&&Math.abs(projected.x)<1.1&&Math.abs(projected.y)<1.1;
+    if(visible){probe.set(camera.position,direction.normalize());const block=probe.intersectObjects(walls.children,false).find(hit=>hit.distance<distance-.12);if(block)visible=false;}
+    node.hidden=!visible;if(!visible)continue;
+    const {width,height}=object.userData.label;
+    const px=rect.height/(2*Math.tan(camera.fov*Math.PI/360)*distance);
+    node.style.left=`${(projected.x+1)*rect.width/2}px`;node.style.top=`${(1-projected.y)*rect.height/2}px`;
+    node.style.width=`${Math.max(20,width*px)}px`;node.style.height=`${Math.max(10,height*px)}px`;
+    node.style.fontSize=`${Math.max(7,Math.min(height*px*.52,width*px/(node.textContent.length*.99)))}px`;
+  }
+}
+if(renderer&&!svgFallback){renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;}
+if(renderer){
   const resize=()=>{const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();dirty=true;};new ResizeObserver(resize).observe(canvas);
-  reset();resize();status.textContent='準備ができました。正面に5教室、振り返ると4教室。教室一覧からも選べます。';
-  renderer.setAnimationLoop(time=>{move(Math.min((time-lastTime)/1000,.05)||0);lastTime=time;if(dirty&&!document.hidden){updateCamera();renderer.render(scene,camera);dirty=false;}});
+  reset();resize();status.textContent=(svgFallback?'軽量3D表示です。':'準備ができました。')+'正面に5教室、振り返ると4教室。GLBモデルも保存できます。';
+  const tick=time=>{move(Math.min((time-lastTime)/1000,.05)||0);lastTime=time;if(dirty&&!document.hidden){updateCamera();renderer.render(scene,camera);if(svgFallback)updateFallbackLabels();dirty=false;}requestAnimationFrame(tick);};requestAnimationFrame(tick);
   canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();$('error').hidden=false;$('error').textContent='3D描画が中断されました。ページを再読み込みしてください。';});
   // Read-only diagnostic surface used by the local visual smoke test.
   window.astraCampus={get mode(){return mode;},get roomCount(){return rooms.length;},get renderer(){return renderer;},get camera(){return camera;},get scene(){return scene;}};
-}else for(const id of ['overview','turn','download','reset','visit'])$(id).disabled=true;
+}
