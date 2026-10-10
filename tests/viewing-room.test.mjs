@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
 import {state,emit} from '../store.js';
-import {environmentURL,buildDraftPreview,viewingRoomHTML,bindViewingRoom} from '../viewing-room.js';
+import {environmentURL,buildDraftPreview,viewingRoomHTML,bindViewingRoom,viewingEnvironments,readPreviewFiles} from '../viewing-room.js';
 const dom=new JSDOM('<body></body>',{url:'https://school.test/'});
 globalThis.window=dom.window;globalThis.document=dom.window.document;globalThis.DOMParser=dom.window.DOMParser;
 const code=(path,content,project='p')=>({id:path,project_id:project,kind:'code',payload:{path,code:content}});
@@ -28,3 +28,18 @@ test('environment switch isolates draft from production and updates saved change
  dispose();assert.equal(state.listeners.length,before);assert.equal(document.querySelector('#view-screen'),null);
 });
 test('viewers cannot change environment settings',()=>{state.role='viewer';document.body.innerHTML=viewingRoomHTML();assert.equal(document.querySelector('[data-view-settings]').disabled,true);});
+
+test('custom environments preserve legacy URLs and show project HTML bundles',()=>{
+ const payload={category:'viewing-environments',productionUrl:'https://old.test',environments:[{id:'review',name:'レビュー環境',url:'',preview:{entry:'demo.html',files:[{path:'demo.html',code:'<h1>ファイル画面</h1>'}]}}]};
+ assert.equal(viewingEnvironments(payload)[0].url,'https://old.test');
+ state.role='editor';state.entities=[{id:'env',project_id:'p',kind:'resource',payload}];document.body.innerHTML=viewingRoomHTML();const dispose=bindViewingRoom({projectId:'p',dialog:()=>{},notify:()=>{}});
+ document.querySelector('[data-view-env="review"]').click();assert.match(document.querySelector('#view-screen').srcdoc,/ファイル画面/);assert.equal(document.querySelector('#view-source').value,'file');dispose();
+});
+test('HTML upload combines selected styles and scripts and rejects incomplete bundles',async()=>{
+ const file=(name,content)=>({name,size:content.length,text:async()=>content});
+ const preview=await readPreviewFiles([file('demo.html','<link rel="stylesheet" href="style.css"><script src="main.js"></script>'),file('style.css','body{color:red}'),file('main.js','document.title="OK"')]);
+ const html=buildDraftPreview(preview.files.map(payload=>({payload})),preview.entry);assert.match(html,/color:red/);assert.match(html,/document.title/);
+ await assert.rejects(readPreviewFiles([file('demo.html','<script src="missing.js"></script>')]),/下書きがありません/);
+ await assert.rejects(readPreviewFiles([file('sample.exe','x')]),/HTML/);
+ await assert.rejects(readPreviewFiles([{name:'huge.html',size:3*1024*1024}]),/2MB/);
+});
