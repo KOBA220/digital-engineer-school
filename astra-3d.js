@@ -12,7 +12,8 @@ const rooms = [
   {id:'study',name:'勉強部屋',short:'勉強',text:'一人でも、みんなでも。自分のペースで学びを深める。',color:0x8aaa96},
   {id:'presentation',name:'プレゼンルーム',short:'プレゼン',text:'つくったものを伝える、見せる。挑戦を分かち合う教室。',color:0x899eb9},
   {id:'editing',name:'編集部屋',short:'編集',text:'文章・表・スライドを整えて、伝わる成果物に仕上げる。',color:0xb18f9d},
-].map((r,i)=>({...r,index:i,side:i<5?-1:1,x:i<5?(i-2)*6.6:(i-6.5)*8.25,width:i<5?6.6:8.25}));
+  {id:'viewing',name:'映像ルーム',short:'映像',text:'開発した画面を映して、本番とデモを切り替えて確認する教室。',color:0x858fae},
+].map((r,i)=>({...r,index:i,side:i<5?-1:1,x:i<5?(i-2)*6.6:(i-7)*6.6,width:6.6}));
 const $=id=>document.getElementById(id);
 const canvas=$('campus'),status=$('status');
 const scene=new THREE.Scene();scene.background=new THREE.Color(0xdccce4);scene.fog=new THREE.Fog(0xe8cabe,44,105);
@@ -160,7 +161,8 @@ function buildRoomInterior(g,r){
     ['Word','Excel','PowerPoint'].forEach((t,i)=>screen(-1.1+i*1.45,10.55,t,[0x8aaac3,0x93b8a0,0xcea48f][i]));
     board('共同編集',['文章・表・スライド','読み込む → 編集 → 保存']);
   }
-  r.layout={dev:'PC作業席とサーバーラック',design:'大きな制作机と配色サンプル',scrum:'未着手・進行中・完了のタスクボード',library:'本棚と閲覧席',meeting:'会議テーブルと議題ボード',communication:'向かい合うソファとカフェテーブル',study:'仕切り付きの個別学習席',presentation:'壇上・スクリーン・観客席',editing:'Word・Excel・PowerPointの共同編集席'}[r.id];
+  if(r.id==='viewing'){B('Preview projection screen',0,2.05,12.93,5.1,2.05,.09,0x465567);L('本番環境 / デモ環境',0,2.55,12.85,4.8,.36);L('開発した画面を確認',0,1.95,12.85,4.5,.32);table(0,10.4,2.3,1);screen(0,10.5,'Preview',0x899eb9);for(const dx of [-1.2,1.2])chair(dx,8.9);}
+  r.layout={viewing:'本番・デモの切り替えスクリーンと操作席',dev:'PC作業席とサーバーラック',design:'大きな制作机と配色サンプル',scrum:'未着手・進行中・完了のタスクボード',library:'本棚と閲覧席',meeting:'会議テーブルと議題ボード',communication:'向かい合うソファとカフェテーブル',study:'仕切り付きの個別学習席',presentation:'壇上・スクリーン・観客席',editing:'Word・Excel・PowerPointの共同編集席'}[r.id];
 }
 function desk(parent,x,z,room){
   box(parent,'Desk top',x,.78,z,1.05,.085,.66,0xd4b483);
