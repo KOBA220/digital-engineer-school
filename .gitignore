@@ -6,3 +6,6 @@ dist/
 test-results/
 
 node_modules/
+
+local-office/data/
+local-office/root.crt

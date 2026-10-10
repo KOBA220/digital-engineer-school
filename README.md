@@ -163,3 +163,7 @@ npm run test:db
 - この画面は文字・セルの編集モードです。Officeと同じレイアウト表示、フォントや図形の編集、画像の追加、Excelの数式計算には対応していません。数式はExcelで開いた際に再計算されます。共有数式・配列数式セル、旧形式、マクロ付き、暗号化ファイルは編集対象外です。
 - 体験モードはこの端末だけに保存され、添付ファイルは150KBまでです。
 - 既存の `resource` エンティティを使い、新しいDBテーブルは作りません。`office-file` が元ファイル、`office-edit` が項目単位の変更を表します。JSZipは3.10.2を固定し、MITライセンスを同梱しています。
+
+## PCで動かすONLYOFFICE（追加サーバー契約なし）
+
+編集部屋の「ONLYOFFICE接続」から、手元のPCで動かすCommunity版へ接続できます。Wordのページ・PowerPointのスライド・Excelのシートを表示したまま共同編集し、既存のプロジェクトStorageへ保存します。PC側の起動が必要です。Windowsで無料のDocker Engineを使う手順、HTTPS証明書、LANからの接続、保存待ちの復旧は [local-office/README.md](local-office/README.md) を参照してください。

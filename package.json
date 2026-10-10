@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "python3 -m http.server 4173",
-    "check": "node --check viewing-room.js && node --check editing-room.js && node --check office-file.js && node --check office-edit-data.js && node --check team-work.js && node --check app.js && node --check store.js && node --check canvas.js && node --check ai.js && node --check campus3d.js && node --check campus-astra.js && node --check community-data.js && node --check community-chat.js && node --check study-bank.js && node --check study-room.js && node --check presentation-catalog.js && node --check presentation-room.js && node --check scripts/presentation-assets.mjs && node --check astra-3d.js && node --check painted-renderer.js",
+    "check": "node --check local-office/server.mjs && node --check onlyoffice-client.js && node --check viewing-room.js && node --check editing-room.js && node --check office-file.js && node --check office-edit-data.js && node --check team-work.js && node --check app.js && node --check store.js && node --check canvas.js && node --check ai.js && node --check campus3d.js && node --check campus-astra.js && node --check community-data.js && node --check community-chat.js && node --check study-bank.js && node --check study-room.js && node --check presentation-catalog.js && node --check presentation-room.js && node --check scripts/presentation-assets.mjs && node --check astra-3d.js && node --check painted-renderer.js",
     "build": "node scripts/build.mjs",
-    "test": "node --test tests/viewing-room.test.mjs tests/campus-astra.test.mjs tests/store.test.mjs tests/config.test.mjs tests/study.test.mjs tests/presentation.test.mjs tests/team-work.test.mjs tests/office-file.test.mjs tests/office-sync.test.mjs tests/editing-room.test.mjs",
+    "test": "node --test tests/viewing-room.test.mjs tests/campus-astra.test.mjs tests/store.test.mjs tests/config.test.mjs tests/study.test.mjs tests/presentation.test.mjs tests/team-work.test.mjs tests/office-file.test.mjs tests/office-sync.test.mjs tests/editing-room.test.mjs tests/onlyoffice.test.mjs",
     "test:db": "node tests/database.test.mjs",
     "vendor:astra": "esbuild scripts/astra-three-entry.mjs --bundle --format=esm --minify --outfile=vendor/astra-three.js"
   },

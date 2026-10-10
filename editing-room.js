@@ -1,3 +1,4 @@
+import {officeConnection,configureOfficeConnection,mountOnlyOffice} from './onlyoffice-client.js?v=onlyoffice-local-1';
 import {state,put,canEdit} from './store.js';
 import {uploadAttachment,attachmentURL} from './attachments.js';
 import {readOffice,exportOffice,officeExtension,officeMime,fieldValue,columnName,parseCellAddress} from './office-file.js';
@@ -5,26 +6,35 @@ import {officeFiles,editMap,saveOfficeField} from './office-edit-data.js';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let currentSession=null;
 export async function flushOfficeEditor(){if(currentSession)await currentSession.flush();}
-export function editingRoomHTML(){return `<section id="editing-room" class="editing-room"><div class="editing-intro"><div><span class="section-label">みんなの編集机</span><h2>ファイルを開いて、一緒に編集する。</h2><p>Wordの本文・Excelのセル・PowerPointの文字を、この部屋で編集できます。</p></div><label class="button primary office-upload-label">＋ ファイルを読み込む<input id="office-upload" type="file" accept=".docx,.xlsx,.pptx" ${canEdit()?'':'disabled'}></label></div><p class="muted">対応：.docx / .xlsx / .pptx · 20MBまで。本文・セル・文字の編集モードです。図形の移動、画像の追加、フォント変更、Officeと同じレイアウト表示は未対応です。Excelの数式は保存できますが、この画面では再計算しません。</p><div class="office-desk"><aside class="office-file-shelf"><h3>プロジェクトのファイル</h3><div id="office-file-list"></div></aside><section id="office-editor" class="office-editor"><div class="empty">左のファイルを開くか、Officeファイルを読み込んでください。</div></section></div></section>`;}
+export function editingRoomHTML(){return `<section id="editing-room" class="editing-room"><div class="editing-intro"><div><span class="section-label">みんなの編集机</span><h2>ファイルを開いて、一緒に編集する。</h2><p>ONLYOFFICE接続後は、Wordのページ・Excelのシート・PowerPointのスライドを表示したまま共同編集できます。</p></div><button id="office-connection" ${canEdit()?'':'disabled'}>ONLYOFFICE接続</button><label class="button primary office-upload-label">＋ ファイルを読み込む<input id="office-upload" type="file" accept=".docx,.xlsx,.pptx" ${canEdit()?'':'disabled'}></label></div><p class="muted">対応：.docx / .xlsx / .pptx · 20MBまで。接続前は本文・セル・文字の簡易編集です。レイアウト編集には、セットアップしたPCが起動している必要があります。</p><div class="office-desk"><aside class="office-file-shelf"><h3>プロジェクトのファイル</h3><div id="office-file-list"></div></aside><section id="office-editor" class="office-editor"><div class="empty">左のファイルを開くか、Officeファイルを読み込んでください。</div></section></div></section>`;}
 export function bindEditingRoom({projectId,item,onOpen,notify,dialog}){
  const root=document.querySelector('#editing-room');if(!root)return ()=>{};
  const files=root.querySelector('#office-file-list'),pane=root.querySelector('#office-editor'),upload=root.querySelector('#office-upload');
  let disposed=false,model=null,documentId=null,sectionIndex=0,offset=0,rowStart=1,colStart=1,loading=0,working=false,savePromise=null;
- const pending=new Map(),timers=new Map();
+ let officeCleanup=null,layoutOpening=false;const pending=new Map(),timers=new Map();
+ root.querySelector('#office-connection').onclick=()=>configureOfficeConnection({projectId,dialog,notify});
  const changes=()=>editMap(projectId,documentId);
  const status=(text,error=false)=>{const element=pane.querySelector('#office-save-status');if(element){element.textContent=text;element.classList.toggle('error',error);}};
  function drawFiles(){files.innerHTML=officeFiles(projectId).map(e=>`<button class="office-file-card ${e.id===documentId?'active':''}" data-office-file="${e.id}"><span class="tag">${esc(e.payload.ext.toUpperCase())}</span><strong>${esc(e.payload.title)}</strong><small>開いて編集 →</small></button>`).join('')||'<p class="muted">まだ読み込んだファイルがありません。</p>';files.querySelectorAll('[data-office-file]').forEach(b=>b.onclick=async()=>{try{await flush();onOpen(b.dataset.officeFile);}catch(e){notify(e.message);}});}
  async function openFile(id){
   const row=officeFiles(projectId).find(e=>e.id===id);if(!row){pane.innerHTML='<div class="empty">このファイルは見つからないか、閲覧権限がありません。</div>';return;}
-  documentId=id;drawFiles();pane.innerHTML='<div class="empty" role="status">ファイルを読み込んでいます…</div>';const sequence=++loading;
-  try{const response=await fetch(await attachmentURL(row.payload.source));if(!response.ok)throw Error('ファイルを取得できません');const loaded=await readOffice(new Uint8Array(await response.arrayBuffer()),row.payload.source.name);
-   if(disposed||sequence!==loading)return;model=loaded;drawEditor();
+  officeCleanup?.();officeCleanup=null;model=null;documentId=id;drawFiles();pane.innerHTML='<div class="empty" role="status">ファイルを読み込んでいます…</div>';const sequence=++loading;
+  try{if(row.payload.onlyofficeManaged){await openLayout(row,sequence);return;}const response=await fetch(await attachmentURL(row.payload.source));if(!response.ok)throw Error('ファイルを取得できません');const loaded=await readOffice(new Uint8Array(await response.arrayBuffer()),row.payload.source.name);
+   if(disposed||sequence!==loading)return;model=loaded;if(officeConnection(projectId)&&canEdit())await openLayout(row,sequence);else drawEditor();
   }catch(e){if(disposed)return;pane.innerHTML=`<div class="empty" role="alert">${esc(e.message)}</div>`;}
+ }
+ async function openLayout(row,sequence=loading){
+  layoutOpening=true;const seed=model&&!row.payload.onlyofficeManaged?await exportOffice(model,changes()):undefined;
+  pane.innerHTML=`<div class="office-editor-toolbar"><div><h3>${esc(row.payload.title)} · レイアウト編集</h3><span id="onlyoffice-save-status" role="status">接続中</span></div><button id="office-layout-save" ${canEdit()?'':'disabled'}>プロジェクトに保存</button><a href="${esc(officeConnection(projectId))}" target="_blank" rel="noopener noreferrer">PCの接続先を開く ↗</a></div><div id="office-layout" class="office-layout"><div class="empty">ONLYOFFICEへ接続しています…</div></div><p class="muted">編集は共同編集画面に反映されます。保存ボタンでプロジェクトへ保存し、終了時にも保存されます。PCは保存完了まで起動しておいてください。</p>`;
+  try{const cleanup=await mountOnlyOffice({projectId,row,container:pane.querySelector('#office-layout'),initialBytes:seed,notify,isDisposed:()=>disposed||sequence!==loading});if(disposed||sequence!==loading){cleanup?.();return;}officeCleanup=cleanup;pane.querySelector('#office-layout-save').onclick=()=>flush().then(()=>notify('プロジェクトに保存しました')).catch(error=>notify(error.message));}
+  catch(error){if(disposed||sequence!==loading)return;pane.querySelector('#office-layout').innerHTML=`<div class="empty" role="alert">${esc(error.message)}<p><button id="office-retry">再接続</button>${!officeFiles(projectId).find(file=>file.id===row.id)?.payload.onlyofficeManaged&&model?'<button id="office-basic">簡易編集で開く</button>':''}</p></div>`;pane.querySelector('#office-retry').onclick=()=>openFile(row.id);const basic=pane.querySelector('#office-basic');if(basic)basic.onclick=()=>drawEditor();}
+  finally{layoutOpening=false;}
  }
  function drawEditor(){
   if(!model)return;const row=officeFiles(projectId).find(e=>e.id===documentId);if(!row)return;
   const section=model.sections[sectionIndex],map=changes();
-  pane.innerHTML=`<div class="office-editor-toolbar"><div><h3>${esc(row.payload.title)}</h3><span id="office-save-status" role="status">${state.preview?'この端末だけに保存':'保存済み · 同じプロジェクトで同期'}</span></div><div class="row wrap"><button id="office-save" ${canEdit()?'':'disabled'}>今すぐ保存</button><button id="office-export">編集したファイルをダウンロード</button></div></div><div class="office-editor-tabs">${model.sections.map((s,i)=>`<button data-office-section="${i}" aria-current="${i===sectionIndex?'true':'false'}">${esc(s.label)}</button>`).join('')}</div><div id="office-edit-conflicts" role="alert"></div><div id="office-edit-content"></div>`;
+  pane.innerHTML=`<div class="office-editor-toolbar"><div><h3>${esc(row.payload.title)}</h3><span id="office-save-status" role="status">${state.preview?'この端末だけに保存':'保存済み · 同じプロジェクトで同期'}</span></div><div class="row wrap">${officeConnection(projectId)?'<button id="office-layout-open">レイアウト編集で開く</button>':''}<button id="office-save" ${canEdit()?'':'disabled'}>今すぐ保存</button><button id="office-export">編集したファイルをダウンロード</button></div></div><div class="office-editor-tabs">${model.sections.map((s,i)=>`<button data-office-section="${i}" aria-current="${i===sectionIndex?'true':'false'}">${esc(s.label)}</button>`).join('')}</div><div id="office-edit-conflicts" role="alert"></div><div id="office-edit-content"></div>`;
+  const layoutButton=pane.querySelector('#office-layout-open');if(layoutButton)layoutButton.onclick=async()=>{try{await flush();await openLayout(row);}catch(error){notify(error.message);}};
   const content=pane.querySelector('#office-edit-content');
   if(!section){content.innerHTML='<p class="empty">編集できる本文・シート・スライドがありません。</p>';return;}
   if(model.ext==='xlsx'){
@@ -70,13 +80,13 @@ export function bindEditingRoom({projectId,item,onOpen,notify,dialog}){
   drawConflicts();syncFields();status(failed?'未保存 · エラーまたは競合を確認してください':pending.size?'未保存の項目があります':state.preview?'この端末に保存済み':'保存済み · メンバーに反映',failed);return failed;
  }
  async function saveAll(){if(savePromise)return savePromise;if(!pending.size||!model)return;savePromise=runSave();let failed;try{failed=await savePromise;}finally{savePromise=null;}if(pending.size&&!failed){setTimeout(()=>{if(!disposed)saveAll().catch(()=>{});},650);}if(pending.size&&!Array.from(pending.values()).some(p=>p.conflict))status(failed?'未保存 · 「今すぐ保存」で再試行できます':'未保存 · 自動保存を待っています',!!failed);}
- async function flush(){for(const timer of timers.values())clearTimeout(timer);timers.clear();if(savePromise)await savePromise;if(pending.size)await saveAll();if(pending.size)throw Error('保存できていない編集があります。保存エラーまたは競合を解決してから移動してください');if(working)throw Error('ファイルを読み込み中です。完了後に移動してください');}
+ async function flush(){if(officeCleanup?.flush)await officeCleanup.flush();for(const timer of timers.values())clearTimeout(timer);timers.clear();if(savePromise)await savePromise;if(pending.size)await saveAll();if(pending.size)throw Error('保存できていない編集があります。保存エラーまたは競合を解決してから移動してください');if(working)throw Error('ファイルを読み込み中です。完了後に移動してください');}
  upload.onchange=async()=>{
   const file=upload.files?.[0];if(!file)return;upload.disabled=true;working=true;
   try{const ext=officeExtension(file.name),bytes=new Uint8Array(await file.arrayBuffer());await readOffice(bytes,file.name);const source=await uploadAttachment(file,projectId);const row=await put(projectId,'resource',{category:'office-file',title:file.name,ext,source});working=false;notify('ファイルを読み込みました');await flush();onOpen(row.id);}catch(e){notify(e.message);}finally{working=false;upload.disabled=!canEdit();upload.value='';}
  };
- const listener=event=>{if(event!=='data'||disposed)return;drawFiles();syncFields();};state.listeners.push(listener);
+ const listener=event=>{if(event!=='data'||disposed)return;drawFiles();const row=officeFiles(projectId).find(e=>e.id===documentId);if(row?.payload.onlyofficeManaged&&model&&!officeCleanup&&!layoutOpening){model=null;openFile(documentId);}else syncFields();};state.listeners.push(listener);
  const beforeUnload=e=>{if(pending.size||working){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',beforeUnload);
  const session={flush};currentSession=session;drawFiles();if(item)openFile(item);
- return ()=>{disposed=true;loading++;for(const timer of timers.values())clearTimeout(timer);const i=state.listeners.indexOf(listener);if(i>=0)state.listeners.splice(i,1);window.removeEventListener('beforeunload',beforeUnload);if(currentSession===session)currentSession=null;};
+ return ()=>{disposed=true;loading++;officeCleanup?.();officeCleanup=null;for(const timer of timers.values())clearTimeout(timer);const i=state.listeners.indexOf(listener);if(i>=0)state.listeners.splice(i,1);window.removeEventListener('beforeunload',beforeUnload);if(currentSession===session)currentSession=null;};
 }

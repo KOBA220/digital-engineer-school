@@ -1,0 +1,52 @@
+services:
+  documentserver:
+    image: onlyoffice/documentserver:9.4.0
+    restart: unless-stopped
+    environment:
+      JWT_ENABLED: "true"
+      JWT_SECRET: ${JWT_SECRET:?Run setup.ps1 first}
+      JWT_IN_BODY: "true"
+      ALLOW_PRIVATE_IP_ADDRESS: "true"
+    volumes:
+      - office-data:/var/www/onlyoffice/Data
+      - office-lib:/var/lib/onlyoffice
+      - office-db:/var/lib/postgresql
+      - office-logs:/var/log/onlyoffice
+  bridge:
+    image: node:22-bookworm-slim
+    restart: unless-stopped
+    working_dir: /app
+    command: ["node", "server.mjs"]
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      SUPABASE_URL: https://rfhgmszrqoipuryigpjg.supabase.co
+      SUPABASE_PUBLIC_KEY: sb_publishable_JYb9P-i_bSDQECrPZZo7pg_OVz038T5
+      SCHOOL_ORIGIN: https://koba220.github.io
+      OFFICE_PUBLIC_URL: https://${OFFICE_HOST:-localhost}:8443
+      DATA_DIR: /data
+    volumes:
+      - ./server.mjs:/app/server.mjs:ro
+      - ../scripts/validate-config.mjs:/scripts/validate-config.mjs:ro
+      - bridge-data:/data
+  gateway:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "8443:443"
+    environment:
+      OFFICE_HOST: ${OFFICE_HOST:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - gateway-data:/data
+      - gateway-config:/config
+    depends_on:
+      - bridge
+      - documentserver
+volumes:
+  office-data:
+  office-lib:
+  office-db:
+  office-logs:
+  bridge-data:
+  gateway-data:
+  gateway-config:
